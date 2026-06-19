@@ -81,18 +81,5 @@ Thumbs.db
 .vscode/
 *.swp
 
-<<<<<<< HEAD
-# =========================
-# Archives / Documents (IMPORTANT FIX)
-# =========================
-*.zip
-*.rar
-*.7z
-
-*.pdf
-*.docx
-*.pptx
-*.xlsx
-=======
 
 >>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
