@@ -21,7 +21,7 @@ env/
 ai/venv
 pip-wheel-metadata/
 
-# Backend runtime folders (generated)
+# Backend runtime files
 backend/uploads/
 backend/frames/
 
@@ -33,23 +33,13 @@ backend/frames/
 .env.*.local
 
 # =========================
-# AI Models & Data
+# AI MODELS
 # =========================
-*.h5
-*.pt
-*.pth
-*.onnx
-*.pkl
 models/
 
-# datasets / outputs (IMPORTANT for your case)
+# datasets (optional heavy data)
 datasets/
-new dataset/
 results/
-test/
-frames/
-output/
-outputs/
 
 # =========================
 # Logs
@@ -65,3 +55,9 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# =========================
+# ARCHIVES RULE
+# =========================
+*.zip
+# NOTE: .rar is ALLOWED (as you requested)
