@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-<<<<<<< HEAD
 import { Camera, X, Shield, ShieldAlert, Activity, RefreshCw, Receipt, Play, Square, Pause, Settings, Upload, Film, Loader2, CheckCircle } from "lucide-react";
 import {
     API_BASE,
@@ -12,16 +11,10 @@ import {
 } from "../lib/api";
 
 export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
-=======
-import { Camera, X, Shield, Activity, RefreshCw } from "lucide-react";
-
-export default function LiveRecognitionPanel({ onClose }) {
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     const videoRef = useRef(null);
     const imgRef = useRef(null); // For IP Cam
     const canvasRef = useRef(null);
 
-<<<<<<< HEAD
     const [sourceType, setSourceType] = useState('webcam'); // webcam | ip | pipeline | offline
     const [ipUrl, setIpUrl] = useState("http://192.168.1.5:8080/video");
     const [rtspUrl, setRtspUrl] = useState("");
@@ -41,29 +34,20 @@ export default function LiveRecognitionPanel({ onClose }) {
         dresscode_threshold: 0.55,
         frame_skip: 1,
     });
-=======
-    const [sourceType, setSourceType] = useState('webcam'); // 'webcam' | 'ip'
-    const [ipUrl, setIpUrl] = useState("http://192.168.1.5:8080/video"); // Default placeholder
-    const [isActive, setIsActive] = useState(false);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
     const [isSyncing, setIsSyncing] = useState(false);
     const [recognitions, setRecognitions] = useState([]);
     const [faces, setFaces] = useState([]);
-<<<<<<< HEAD
     const [weaponDetections, setWeaponDetections] = useState([]);
     const [fightDetection, setFightDetection] = useState(null);
     const [dresscodeViolations, setDresscodeViolations] = useState([]);
     const [finesApplied, setFinesApplied] = useState([]);
     const [recentFineAlerts, setRecentFineAlerts] = useState([]);
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     const [error, setError] = useState("");
     const [stats, setStats] = useState({ count: 0, lastCheck: null });
 
     const streamRef = useRef(null);
     const intervalRef = useRef(null);
-<<<<<<< HEAD
     const pipelinePollRef = useRef(null);
     const frameCountRef = useRef(0);
     const recognitionPendingRef = useRef(false);
@@ -79,11 +63,6 @@ export default function LiveRecognitionPanel({ onClose }) {
     const INTERVAL_MS = 333; // ~3 ticks/sec → ~1 detection/sec when FRAME_SKIP=3
 
     useEffect(() => {
-=======
-
-    useEffect(() => {
-        // Auto-start webcam if selected
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         if (sourceType === 'webcam') {
             startCamera();
         }
@@ -91,36 +70,24 @@ export default function LiveRecognitionPanel({ onClose }) {
         return () => {
             stopRecognition();
             stopCamera();
-<<<<<<< HEAD
             stopPipeline();
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-=======
-        };
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     }, []);
 
     // Stop camera when switching modes
     useEffect(() => {
         stopRecognition();
         stopCamera();
-<<<<<<< HEAD
         stopPipeline();
         setIsActive(false);
         setError("");
 
-=======
-        setIsActive(false);
-        setError("");
-
-        // Slight delay to allow DOM to update refs
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         if (sourceType === 'webcam') {
             setTimeout(startCamera, 100);
         }
     }, [sourceType]);
 
-<<<<<<< HEAD
     const pollPipelineStats = async () => {
         try {
             const data = await aiGet("/stats");
@@ -228,11 +195,6 @@ export default function LiveRecognitionPanel({ onClose }) {
     const verifyBackend = async () => {
         try {
             const res = await fetch(`${API_BASE}/api/test`);
-=======
-    const verifyBackend = async () => {
-        try {
-            const res = await fetch("http://localhost:5000/api/test");
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             const data = await res.json();
             console.log(`[System] Connected to Backend Process: ${data.processId}`);
         } catch (err) {
@@ -278,7 +240,6 @@ export default function LiveRecognitionPanel({ onClose }) {
         // For IP cam, just setting isActive false hides the img
     };
 
-<<<<<<< HEAD
     /** Push a JPEG base64 frame into the rolling buffer (keeps last 15 ≈ 15 seconds) */
     const pushFrame = (base64) => {
         frameBufferRef.current.push(base64);
@@ -319,11 +280,6 @@ export default function LiveRecognitionPanel({ onClose }) {
         if (intervalRef.current) return;
         setIsSyncing(true);
         frameBufferRef.current = []; // clear old frames
-=======
-    const startRecognition = () => {
-        if (intervalRef.current) return;
-        setIsSyncing(true);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         console.log("[Detection] Initializing AI Analysis loop...");
 
         intervalRef.current = setInterval(async () => {
@@ -343,7 +299,6 @@ export default function LiveRecognitionPanel({ onClose }) {
             }
 
             if (!source || !isActive || width === 0 || height === 0) {
-<<<<<<< HEAD
                 return;
             }
 
@@ -379,29 +334,6 @@ export default function LiveRecognitionPanel({ onClose }) {
                     headers: authHeaders(),
                     body: JSON.stringify({ imageBase64: base64Image }),
                     signal: abortController.signal,
-=======
-                // console.debug("Waiting for source dimensions...");
-                return;
-            }
-
-            const canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(source, 0, 0, width, height);
-
-            const base64Image = canvas.toDataURL("image/jpeg", 0.7);
-
-            try {
-                const token = localStorage.getItem("token");
-                const res = await fetch("http://localhost:5000/api/recognition/live", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ imageBase64: base64Image })
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                 });
 
                 const data = await res.json();
@@ -409,7 +341,6 @@ export default function LiveRecognitionPanel({ onClose }) {
                     if (data.count > 0) {
                         console.log(`[Detection] Found ${data.count} faces, ${data.recognitions?.length || 0} recognized`, data.faces);
                     }
-<<<<<<< HEAD
                     if (data.weaponDetections?.length > 0) {
                         console.log(`[Detection] ⚠ Weapons: ${data.weaponDetections.map(w => `${w.personLabel} holding ${w.weapon}`).join(", ")}`);
                     }
@@ -440,17 +371,12 @@ export default function LiveRecognitionPanel({ onClose }) {
                     setFightDetection(data.fightDetection || null);
                     setDresscodeViolations(data.dresscodeViolations || []);
                     setFinesApplied(data.finesApplied || []);
-=======
-                    setRecognitions(data.recognitions || []);
-                    setFaces(data.faces || []);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                     setStats({
                         count: data.count || 0,
                         lastCheck: new Date().toLocaleTimeString()
                     });
                 }
             } catch (err) {
-<<<<<<< HEAD
                 if (err.name === "AbortError") {
                     console.warn("[Detection] Request aborted due to timeout.");
                 } else {
@@ -461,11 +387,6 @@ export default function LiveRecognitionPanel({ onClose }) {
                 recognitionPendingRef.current = false;
             }
         }, INTERVAL_MS);
-=======
-                console.error("[Detection] Sync failed:", err);
-            }
-        }, 1000);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     };
 
     const stopRecognition = () => {
@@ -473,7 +394,6 @@ export default function LiveRecognitionPanel({ onClose }) {
             clearInterval(intervalRef.current);
             intervalRef.current = null;
         }
-<<<<<<< HEAD
         frameCountRef.current = 0;
         frameBufferRef.current = [];
         uploadedViolationsRef.current.clear();
@@ -485,11 +405,6 @@ export default function LiveRecognitionPanel({ onClose }) {
         setDresscodeViolations([]);
         setFinesApplied([]);
         setRecentFineAlerts([]);
-=======
-        setIsSyncing(false);
-        setRecognitions([]);
-        setFaces([]);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         console.log("[Detection] AI Analysis loop stopped.");
     };
 
@@ -498,40 +413,25 @@ export default function LiveRecognitionPanel({ onClose }) {
         const isWebcam = sourceType === 'webcam' && videoRef.current;
         const isIp = sourceType === 'ip' && imgRef.current;
 
-<<<<<<< HEAD
         if (sourceType === 'pipeline' || sourceType === 'offline' || (!isWebcam && !isIp) || !canvasRef.current) return;
-=======
-        if ((!isWebcam && !isIp) || !canvasRef.current) return;
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
         const source = isWebcam ? videoRef.current : imgRef.current;
         const ctx = canvasRef.current.getContext("2d");
 
         const render = () => {
-<<<<<<< HEAD
             const canvas = canvasRef.current;
             if (!canvas || !ctx || !source) return;
 
-=======
-            if (!ctx || !source) return;
-
-            // Dimensions logic
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             const srcW = isWebcam ? source.videoWidth : source.naturalWidth;
             const srcH = isWebcam ? source.videoHeight : source.naturalHeight;
             const clientW = source.clientWidth;
             const clientH = source.clientHeight;
 
-<<<<<<< HEAD
             if (srcW === 0 || srcH === 0 || clientW === 0 || clientH === 0) {
-=======
-            if (srcW === 0 || srcH === 0) {
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                 requestAnimationFrame(render);
                 return;
             }
 
-<<<<<<< HEAD
             canvas.width = clientW;
             canvas.height = clientH;
 
@@ -574,53 +474,10 @@ export default function LiveRecognitionPanel({ onClose }) {
                 }
             });
 
-=======
-            // Update canvas size to match displayed video
-            canvasRef.current.width = clientW;
-            canvasRef.current.height = clientH;
-
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-
-            const scaleX = clientW / srcW;
-            const scaleY = clientH / srcH;
-
-            // Draw all detected faces (dashed boxes for potential strangers)
-            ctx.setLineDash([5, 5]);
-            ctx.lineWidth = 2;
-
-            faces.forEach(face => {
-                // Find if this face is recognized
-                const isRecognized = recognitions.some(r =>
-                    Math.abs(r.faceBox.x - face.x) < 10 &&
-                    Math.abs(r.faceBox.y - face.y) < 10
-                );
-
-                if (!isRecognized) {
-                    const isValid = face.w > 0 && face.h > 0;
-                    if (isValid) {
-                        ctx.strokeStyle = "#94a3b8"; // slate-400
-                        ctx.strokeRect(face.x * scaleX, face.y * scaleY, face.w * scaleX, face.h * scaleY);
-
-                        // Small "Unknown" tag
-                        ctx.fillStyle = "#475569"; // slate-600
-                        ctx.font = "bold 9px Inter, sans-serif";
-                        ctx.fillText("UNKNOWN", (face.x * scaleX) + 4, (face.y * scaleY) + 12);
-                    }
-                }
-            });
-
-            // Debug overlay count
-            if (faces.length > 0 || recognitions.length > 0) {
-                // console.debug(`[Render] Drawing ${faces.length} faces, ${recognitions.length} recognized`);
-            }
-
-            // Draw recognized students (solid blue boxes with premium labels)
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             ctx.setLineDash([]);
             ctx.lineWidth = 3;
             recognitions.forEach(rec => {
                 const box = rec.faceBox;
-<<<<<<< HEAD
                 const color = "#3b82f6";
                 ctx.strokeStyle = color;
                 ctx.strokeRect(box.x * scaleX, box.y * scaleY, box.w * scaleX, box.h * scaleY);
@@ -635,36 +492,10 @@ export default function LiveRecognitionPanel({ onClose }) {
                 ctx.fillRect(box.x * scaleX, (box.y * scaleY) - 38, panelWidth, 36);
                 ctx.fillStyle = "white";
                 ctx.fillText(text, (box.x * scaleX) + 6, (box.y * scaleY) - 22);
-=======
-                const color = "#3b82f6"; // blue-500
-
-                ctx.strokeStyle = color;
-                ctx.strokeRect(box.x * scaleX, box.y * scaleY, box.w * scaleX, box.h * scaleY);
-
-                // Premium Label Design
-                const text = rec.student.name.toUpperCase();
-                const confText = `${Math.round(rec.confidence * 100)}% MATCH`;
-
-                ctx.font = "bold 11px Inter, sans-serif";
-                const textWidth = ctx.measureText(text).width;
-                const panelWidth = Math.max(textWidth, 80) + 10;
-
-                // Label Background
-                ctx.fillStyle = color;
-                ctx.fillRect(box.x * scaleX, (box.y * scaleY) - 35, panelWidth, 35);
-
-                // Label Text (Name)
-                ctx.fillStyle = "white";
-                ctx.fillText(text, (box.x * scaleX) + 6, (box.y * scaleY) - 20);
-
-                // Label Text (Confidence)
-                ctx.fillStyle = "rgba(255,255,255,0.7)";
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                 ctx.font = "bold 9px Inter, sans-serif";
                 ctx.fillText(confText, (box.x * scaleX) + 6, (box.y * scaleY) - 8);
             });
 
-<<<<<<< HEAD
             weaponDetections.forEach(det => {
                 const [x, y, bw, bh] = det.bbox;
                 const sx = x * scaleX;
@@ -705,18 +536,12 @@ export default function LiveRecognitionPanel({ onClose }) {
                 ctx.fillText(label, sx + 6, sy - 8);
             });
 
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             requestAnimationFrame(render);
         };
 
         const animId = requestAnimationFrame(render);
         return () => cancelAnimationFrame(animId);
-<<<<<<< HEAD
     }, [recognitions, faces, weaponDetections, fightDetection, dresscodeViolations, sourceType]);
-=======
-    }, [recognitions, faces]);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
     return (
         <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 flex flex-col md:flex-row h-full min-h-[500px]">
@@ -730,7 +555,6 @@ export default function LiveRecognitionPanel({ onClose }) {
                         playsInline
                         className="w-full h-full object-cover opacity-80"
                     />
-<<<<<<< HEAD
                 ) : sourceType === 'pipeline' ? (
                     <img
                         src={pipelineRunning ? aiVideoFeedUrl() : ""}
@@ -759,32 +583,18 @@ export default function LiveRecognitionPanel({ onClose }) {
                     <img
                         ref={imgRef}
                         src={isActive ? `${API_BASE}/api/stream/proxy?url=${encodeURIComponent(ipUrl)}` : ""}
-=======
-                ) : (
-                    <img
-                        ref={imgRef}
-                        src={isActive ? ipUrl : ""}
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                         crossOrigin="anonymous"
                         alt="IP Feed"
                         className="w-full h-full object-contain opacity-80"
                         onError={() => {
-<<<<<<< HEAD
                             if (isActive) setError("Failed to load IP Camera stream. Check URL and same network.");
-=======
-                            if (isActive) setError("Failed to load IP Camera stream. Check URL.");
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                         }}
                     />
                 )}
 
                 <canvas
                     ref={canvasRef}
-<<<<<<< HEAD
                     className={`absolute inset-0 pointer-events-none w-full h-full ${sourceType === 'pipeline' || sourceType === 'offline' ? 'hidden' : ''}`}
-=======
-                    className="absolute inset-0 pointer-events-none w-full h-full"
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                 />
 
                 {!isActive && !error && (
@@ -807,7 +617,6 @@ export default function LiveRecognitionPanel({ onClose }) {
                         {isSyncing ? 'Live Analysis' : 'Standby'}
                     </span>
                     <span className="text-[10px] uppercase font-bold text-slate-400 border-l border-white/20 pl-2 ml-1">
-<<<<<<< HEAD
                         {sourceType === 'webcam' ? 'WEBCAM' : sourceType === 'pipeline' ? 'SURVEILLANCE' : sourceType === 'offline' ? 'OFFLINE' : 'IP CAM'}
                     </span>
                 </div>
@@ -855,11 +664,6 @@ export default function LiveRecognitionPanel({ onClose }) {
                         ))}
                     </div>
                 )}
-=======
-                        {sourceType === 'webcam' ? 'WEBCAM' : 'IP CAM'}
-                    </span>
-                </div>
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             </div>
 
             {/* Control Panel */}
@@ -877,7 +681,6 @@ export default function LiveRecognitionPanel({ onClose }) {
 
                     <div className="space-y-4">
                         {/* Source Switcher */}
-<<<<<<< HEAD
                         <div className="flex flex-wrap bg-slate-800 p-1 rounded-xl gap-1">
                             {[
                                 { id: 'webcam', icon: Camera, label: 'Webcam' },
@@ -997,25 +800,6 @@ export default function LiveRecognitionPanel({ onClose }) {
                             </div>
                         )}
 
-=======
-                        <div className="flex bg-slate-800 p-1 rounded-xl">
-                            <button
-                                onClick={() => setSourceType('webcam')}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${sourceType === 'webcam' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                <Camera size={16} />
-                                Webcam
-                            </button>
-                            <button
-                                onClick={() => setSourceType('ip')}
-                                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${sourceType === 'ip' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
-                            >
-                                <Activity size={16} />
-                                IP Camera
-                            </button>
-                        </div>
-
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                         {sourceType === 'ip' && (
                             <div className="bg-slate-800 p-3 rounded-xl border border-slate-700">
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Camera URL</label>
@@ -1051,7 +835,6 @@ export default function LiveRecognitionPanel({ onClose }) {
                             </div>
                             <p className="text-white font-bold">{recognitions.length} Subject(s)</p>
                         </div>
-<<<<<<< HEAD
 
                         {finesApplied.length > 0 && (
                             <div className="bg-amber-500/10 rounded-2xl p-4 border border-amber-500/20">
@@ -1068,15 +851,12 @@ export default function LiveRecognitionPanel({ onClose }) {
                                 </div>
                             </div>
                         )}
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                     </div>
 
                     {recognitions.length > 0 && (
                         <div className="space-y-2">
                             <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Detected Subjects</p>
                             <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
-<<<<<<< HEAD
                                 {recognitions.map((rec, i) => {
                                     const hasFine = finesApplied.some(f => f.studentId === rec.student._id || f.studentId === rec.student.id);
                                     return (
@@ -1098,26 +878,12 @@ export default function LiveRecognitionPanel({ onClose }) {
                                         </div>
                                     );
                                 })}
-=======
-                                {recognitions.map((rec, i) => (
-                                    <div key={i} className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl">
-                                        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-xs capitalize">
-                                            {rec.student.name[0]}
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-bold text-white leading-none">{rec.student.name}</p>
-                                            <p className="text-[10px] text-blue-400 font-bold mt-1">{Math.round(rec.confidence * 100)}% Match</p>
-                                        </div>
-                                    </div>
-                                ))}
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                             </div>
                         </div>
                     )}
                 </div>
 
                 <div className="space-y-4 mt-8">
-<<<<<<< HEAD
                     {sourceType !== 'pipeline' && sourceType !== 'offline' && (
                         !isSyncing ? (
                             <button
@@ -1140,22 +906,6 @@ export default function LiveRecognitionPanel({ onClose }) {
                         <p className="text-[10px] text-center text-emerald-400 font-bold uppercase">
                             Pipeline running — violations auto-reported to backend
                         </p>
-=======
-                    {!isSyncing ? (
-                        <button
-                            onClick={startRecognition}
-                            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20"
-                        >
-                            Initialize AI
-                        </button>
-                    ) : (
-                        <button
-                            onClick={stopRecognition}
-                            className="w-full bg-red-600/20 hover:bg-red-600/30 text-red-500 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all border border-red-500/20"
-                        >
-                            Stop Syncing
-                        </button>
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                     )}
 
                     <p className="text-[10px] text-center text-slate-600 font-bold uppercase">

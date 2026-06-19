@@ -1,13 +1,8 @@
-<<<<<<< HEAD
 import { useState, useEffect, useCallback } from "react";
-=======
-import { useState } from "react";
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 import Topbar from "../../components/Topbar";
 import StudentsFilters from "../../components/StudentsFilters";
 import StudentsGrid from "../../components/StudentsGrid";
 import StudentRegistrationModal from "../../components/StudentRegistrationModal";
-<<<<<<< HEAD
 import ViewStudentModal from "../../components/ViewStudentModal";
 import EditStudentModal from "../../components/EditStudentModal";
 import { UserPlus } from "lucide-react";
@@ -37,12 +32,6 @@ export default function Students() {
   useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
-=======
-import { UserPlus } from "lucide-react";
-
-export default function Students() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
   return (
     <>
@@ -56,10 +45,7 @@ export default function Students() {
           </div>
 
           <button
-<<<<<<< HEAD
             type="button"
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             onClick={() => setIsModalOpen(true)}
             className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100"
           >
@@ -69,7 +55,6 @@ export default function Students() {
         </div>
 
         <StudentsFilters />
-<<<<<<< HEAD
         <StudentsGrid
           students={students}
           loading={loading}
@@ -77,15 +62,11 @@ export default function Students() {
           onViewDetails={setViewStudent}
           onEdit={(s) => { setViewStudent(null); setEditingStudent(s); }}
         />
-=======
-        <StudentsGrid />
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       </div>
 
       <StudentRegistrationModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-<<<<<<< HEAD
         onRefresh={fetchStudents}
       />
 
@@ -104,9 +85,6 @@ export default function Students() {
           onSaved={() => { fetchStudents(); setEditingStudent(null); }}
         />
       )}
-=======
-      />
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     </>
   );
 }

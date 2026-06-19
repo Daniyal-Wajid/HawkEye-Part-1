@@ -10,23 +10,15 @@ import {
     FileText,
     ClipboardList,
     Gavel,
-<<<<<<< HEAD
     Award,
     Flag,
-=======
-    Award
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 } from "lucide-react";
 
 export const adminSidebarItems = [
     { label: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
     { label: "Analytics", path: "/analytics", icon: BarChart2 },
-<<<<<<< HEAD
     { label: "Camera Violations", path: "/violations", icon: ShieldAlert },
     { label: "Manual Violations", path: "/manual-violations", icon: Flag },
-=======
-    { label: "Violations", path: "/violations", icon: ShieldAlert },
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     { label: "Students", path: "/students", icon: Users },
     { label: "Users", path: "/users", icon: UserCog },
     { label: "Cameras", path: "/cameras", icon: Camera },
@@ -38,20 +30,12 @@ export const adminSidebarItems = [
 export const inchargeSidebarItems = [
     { label: "Dashboard", path: "/incharge/dashboard", icon: LayoutDashboard },
     {
-<<<<<<< HEAD
         label: "Camera Violations",
         path: "/incharge/violations",
         icon: ShieldAlert,
         highlight: true,
     },
     { label: "Manual Violations", path: "/incharge/manual-violations", icon: Flag },
-=======
-        label: "Violations",
-        path: "/incharge/violations",
-        icon: ShieldAlert,
-        highlight: true // Primary highlighted section
-    },
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     { label: "Students", path: "/incharge/students", icon: Users },
     {
         label: "Review Queue",

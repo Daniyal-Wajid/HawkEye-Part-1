@@ -9,15 +9,9 @@ export default function Violations() {
 
       <div className="p-6 space-y-6">
         <div>
-<<<<<<< HEAD
           <h1 className="text-2xl font-bold">Camera Violations</h1>
           <p className="text-slate-500">
             Manage and review violations detected from campus cameras
-=======
-          <h1 className="text-2xl font-bold">Violations</h1>
-          <p className="text-slate-500">
-            Manage and review all violations
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
           </p>
         </div>
 

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState, useEffect, useCallback } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import PolicyRuleCard from "./PolicyRuleCard";
@@ -73,17 +72,5 @@ export default function PolicyRulesGrid() {
         />
       )}
     </>
-=======
-import { policyRules } from "../data/mockPolicyRules";
-import PolicyRuleCard from "./PolicyRuleCard";
-
-export default function PolicyRulesGrid() {
-  return (
-    <div className="grid grid-cols-3 gap-6">
-      {policyRules.map((rule) => (
-        <PolicyRuleCard key={rule.id} rule={rule} />
-      ))}
-    </div>
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   );
 }

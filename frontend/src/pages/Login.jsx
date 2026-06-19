@@ -23,10 +23,7 @@ export default function Login() {
 
       if (!res.ok) {
         alert(data.error || "Login failed");
-<<<<<<< HEAD
         setLoading(false);
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         return;
       }
 

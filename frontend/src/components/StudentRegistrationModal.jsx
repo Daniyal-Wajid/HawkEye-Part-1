@@ -1,19 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Upload, CheckCircle, AlertCircle, Camera, StopCircle, RefreshCw, Video } from "lucide-react";
-<<<<<<< HEAD
 import { API_BASE, authHeaders } from "../lib/api";
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
 export default function StudentRegistrationModal({ isOpen, onClose, onRefresh }) {
     const [form, setForm] = useState({
         name: "",
         rollNumber: "",
         email: "",
-<<<<<<< HEAD
         department: "",
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         password: "",
         confirmPassword: "",
     });
@@ -31,11 +25,8 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
     const [recordTime, setRecordTime] = useState(0);
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [isFaceDetected, setIsFaceDetected] = useState(false);
-<<<<<<< HEAD
     const [isVideoSaved, setIsVideoSaved] = useState(false);
     const [showSaveDiscardButtons, setShowSaveDiscardButtons] = useState(false);
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
     const videoRef = useRef(null);
     const imgRef = useRef(null); // For IP Stream
@@ -45,10 +36,7 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
     const chunksRef = useRef([]);
     const timerRef = useRef(null);
     const detectionIntervalRef = useRef(null);
-<<<<<<< HEAD
     const videoMimeTypeRef = useRef('video/webm');
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
     const stopDetection = () => {
         if (detectionIntervalRef.current) {
@@ -62,19 +50,15 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
         if (detectionIntervalRef.current) return;
 
         detectionIntervalRef.current = setInterval(async () => {
-<<<<<<< HEAD
             // Only run detection in record mode
             if (recordingMode !== 'record') return;
             
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             let source = null;
             let width = 0;
             let height = 0;
 
             if (sourceType === 'webcam' && videoRef.current) {
                 source = videoRef.current;
-<<<<<<< HEAD
                 width = source.videoWidth || 0;
                 height = source.videoHeight || 0;
             } else if (sourceType === 'ip' && imgRef.current) {
@@ -96,41 +80,15 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
             const ctx = canvas.getContext("2d");
             if (!ctx) return;
             
-=======
-                width = source.videoWidth;
-                height = source.videoHeight;
-            } else if (sourceType === 'ip' && imgRef.current) {
-                source = imgRef.current;
-                width = source.naturalWidth;
-                height = source.naturalHeight;
-            }
-
-            if (!source || !isCameraActive || width === 0 || height === 0) return;
-
-            const canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext("2d");
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             ctx.drawImage(source, 0, 0, width, height);
 
             const base64Image = canvas.toDataURL("image/jpeg", 0.5);
             // console.debug("[Pre-check] Analyzing frame for faces...");
 
             try {
-<<<<<<< HEAD
                 const res = await fetch(`${API_BASE}/api/recognition/live`, {
                     method: "POST",
                     headers: authHeaders(),
-=======
-                const token = localStorage.getItem("token");
-                const res = await fetch("http://localhost:5000/api/recognition/live", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    },
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                     body: JSON.stringify({ imageBase64: base64Image })
                 });
 
@@ -138,7 +96,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                 if (res.ok) {
                     setIsFaceDetected(data.count > 0);
                     // Draw detection box on overlay
-<<<<<<< HEAD
                     // Only draw if we're in record mode and canvas exists
                     if (recordingMode === 'record' && canvasOverlayRef.current && source) {
                         const canvas = canvasOverlayRef.current;
@@ -171,30 +128,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                                 });
                             }
                         }
-=======
-                    if (canvasOverlayRef.current) {
-                        const overlayCtx = canvasOverlayRef.current.getContext("2d");
-
-                        // Sync canvas size with display size
-                        const clientW = source.clientWidth;
-                        const clientH = source.clientHeight;
-
-                        canvasOverlayRef.current.width = clientW;
-                        canvasOverlayRef.current.height = clientH;
-
-                        overlayCtx.clearRect(0, 0, canvasOverlayRef.current.width, canvasOverlayRef.current.height);
-
-                        const scaleX = clientW / width;
-                        const scaleY = clientH / height;
-
-                        overlayCtx.strokeStyle = data.count > 0 ? "#22c55e" : "#ef4444";
-                        overlayCtx.lineWidth = 3;
-                        overlayCtx.setLineDash([5, 5]);
-
-                        (data.faces || []).forEach(face => {
-                            overlayCtx.strokeRect(face.x * scaleX, face.y * scaleY, face.w * scaleX, face.h * scaleY);
-                        });
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                     }
                 }
             } catch (err) {
@@ -251,7 +184,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
         }
     }, [isOpen]);
 
-<<<<<<< HEAD
     useEffect(() => {
         // Stop detection when switching to upload mode
         if (recordingMode === 'upload') {
@@ -259,17 +191,12 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
         }
     }, [recordingMode]);
 
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     if (!isOpen) return null;
 
     const startRecording = () => {
         chunksRef.current = [];
-<<<<<<< HEAD
         setIsVideoSaved(false);
         setShowSaveDiscardButtons(false);
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         let streamToRecord = null;
 
         if (sourceType === 'webcam') {
@@ -305,14 +232,9 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
         // Check supported types
         const types = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
         let selectedType = types.find(type => MediaRecorder.isTypeSupported(type));
-<<<<<<< HEAD
         videoMimeTypeRef.current = selectedType || 'video/webm';
 
         const recorder = new MediaRecorder(streamToRecord, { mimeType: videoMimeTypeRef.current });
-=======
-
-        const recorder = new MediaRecorder(streamToRecord, { mimeType: selectedType });
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
         recorder.ondataavailable = (e) => {
             if (e.data.size > 0) {
@@ -321,7 +243,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
         };
 
         recorder.onstop = () => {
-<<<<<<< HEAD
             // Don't automatically set video - wait for user to save or discard
             setIsRecording(false);
             if (timerRef.current) {
@@ -331,13 +252,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
             setShowSaveDiscardButtons(true);
             setRecordTime(10);
             // chunksRef.current already contains all the chunks from ondataavailable
-=======
-            const blob = new Blob(chunksRef.current, { type: selectedType });
-            const file = new File([blob], `registration_${Date.now()}.webm`, { type: selectedType });
-            setVideo(file);
-            setIsRecording(false);
-            clearInterval(timerRef.current);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         };
 
         recorder.start();
@@ -348,7 +262,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
         // 10 second timer
         timerRef.current = setInterval(() => {
             setRecordTime(prev => {
-<<<<<<< HEAD
                 const nextTime = prev + 1;
                 if (nextTime >= 10) {
                     clearInterval(timerRef.current);
@@ -356,18 +269,10 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                     return 10;
                 }
                 return nextTime;
-=======
-                if (prev >= 9) {
-                    stopRecording();
-                    return 10;
-                }
-                return prev + 1;
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             });
         }, 1000);
     };
 
-<<<<<<< HEAD
     const saveVideo = () => {
         if (chunksRef.current.length > 0) {
             const blob = new Blob(chunksRef.current, { type: videoMimeTypeRef.current });
@@ -391,9 +296,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
             clearInterval(timerRef.current);
             timerRef.current = null;
         }
-=======
-    const stopRecording = () => {
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         if (mediaRecorderRef.current && isRecording) {
             mediaRecorderRef.current.stop();
         }
@@ -405,13 +307,8 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
             setError("Passwords do not match");
             return;
         }
-<<<<<<< HEAD
         if (!video || !isVideoSaved) {
             setError("Need to upload or create video. Please save the recorded video or upload a file.");
-=======
-        if (!video) {
-            setError("Please upload or record a registration video");
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             return;
         }
 
@@ -423,19 +320,12 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
             formData.append("name", form.name);
             formData.append("rollNumber", form.rollNumber);
             formData.append("email", form.email);
-<<<<<<< HEAD
             formData.append("department", form.department);
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             formData.append("password", form.password);
             formData.append("confirmPassword", form.confirmPassword);
             formData.append("video", video);
 
-<<<<<<< HEAD
             const res = await fetch(`${API_BASE}/api/students/register`, {
-=======
-            const res = await fetch("http://localhost:5000/api/students/register", {
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                 method: "POST",
                 body: formData,
             });
@@ -454,15 +344,10 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
             setTimeout(() => {
                 onClose();
                 setSuccess(false);
-<<<<<<< HEAD
                 setForm({ name: "", rollNumber: "", email: "", department: "", password: "", confirmPassword: "" });
                 setVideo(null);
                 setIsVideoSaved(false);
                 setShowSaveDiscardButtons(false);
-=======
-                setForm({ name: "", rollNumber: "", email: "", password: "", confirmPassword: "" });
-                setVideo(null);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                 setRecordingMode("upload");
             }, 2000);
         } catch (err) {
@@ -521,30 +406,22 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
 
                         <div className="flex bg-slate-200 p-1.5 rounded-2xl mb-6 w-fit mx-auto shadow-inner">
                             <button
-<<<<<<< HEAD
                                 onClick={() => { 
                                     setRecordingMode("upload"); 
                                     stopCamera();
                                     setIsVideoSaved(false);
                                     setShowSaveDiscardButtons(false);
                                 }}
-=======
-                                onClick={() => { setRecordingMode("upload"); stopCamera(); }}
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                                 className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${recordingMode === 'upload' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 Upload File
                             </button>
                             <button
-<<<<<<< HEAD
                                 onClick={() => {
                                     setRecordingMode("record");
                                     setIsVideoSaved(false);
                                     setShowSaveDiscardButtons(false);
                                 }}
-=======
-                                onClick={() => setRecordingMode("record")}
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                                 className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${recordingMode === 'record' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
                                 Record Live
@@ -556,14 +433,10 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                                 <input
                                     type="file"
                                     accept="video/*"
-<<<<<<< HEAD
                                     onChange={(e) => {
                                         setVideo(e.target.files[0]);
                                         setIsVideoSaved(true);
                                     }}
-=======
-                                    onChange={(e) => setVideo(e.target.files[0])}
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                                     className="absolute inset-0 opacity-0 cursor-pointer"
                                 />
                                 <div className="p-5 bg-white rounded-2xl shadow-sm text-blue-600 group-hover:scale-110 transition-transform">
@@ -589,11 +462,7 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                                 ) : (
                                     <img
                                         ref={imgRef}
-<<<<<<< HEAD
                                         src={isCameraActive ? `${API_BASE}/api/stream/proxy?url=${encodeURIComponent(ipUrl)}` : ""}
-=======
-                                        src={isCameraActive ? ipUrl : ""}
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                                         crossOrigin="anonymous"
                                         alt="IP Cam"
                                         className="w-full h-full object-contain"
@@ -629,7 +498,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                                 )}
 
                                 {isCameraActive && (
-<<<<<<< HEAD
                                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
                                         {showSaveDiscardButtons ? (
                                             <div className="flex items-center gap-3">
@@ -649,10 +517,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                                                 </button>
                                             </div>
                                         ) : !isRecording ? (
-=======
-                                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
-                                        {!isRecording ? (
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                                             <button
                                                 onClick={startRecording}
                                                 className="flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-red-500 transition-all shadow-xl shadow-red-500/20 active:scale-95"
@@ -661,33 +525,20 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                                                 Start 10s Recording
                                             </button>
                                         ) : (
-<<<<<<< HEAD
                                             <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/20">
                                                 <div className="flex items-center gap-2 text-white font-mono text-sm">
-=======
-                                            <div className="flex items-center gap-4 bg-black/60 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/20">
-                                                <div className="flex items-center gap-2 text-white font-mono text-xl">
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                                                     <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
                                                     00:{recordTime.toString().padStart(2, '0')}
                                                 </div>
                                                 <button onClick={stopRecording} className="text-white hover:text-red-400 transition-colors">
-<<<<<<< HEAD
                                                     <StopCircle size={20} />
-=======
-                                                    <StopCircle size={24} />
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                                                 </button>
                                             </div>
                                         )}
                                     </div>
                                 )}
 
-<<<<<<< HEAD
                                 {isVideoSaved && !isRecording && isCameraActive && (
-=======
-                                {video && !isRecording && isCameraActive && (
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                                     <div className="absolute top-4 right-4 bg-green-500 text-white p-2 rounded-lg shadow-lg">
                                         <CheckCircle size={20} />
                                     </div>
@@ -754,7 +605,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                             </div>
                         </div>
 
-<<<<<<< HEAD
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-700 ml-1">Email Address</label>
@@ -777,18 +627,6 @@ export default function StudentRegistrationModal({ isOpen, onClose, onRefresh })
                                     placeholder="Computer Science"
                                 />
                             </div>
-=======
-                        <div className="space-y-2">
-                            <label className="text-sm font-bold text-slate-700 ml-1">Email Address</label>
-                            <input
-                                required
-                                type="email"
-                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium"
-                                value={form.email}
-                                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                placeholder="ahmed@university.edu"
-                            />
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

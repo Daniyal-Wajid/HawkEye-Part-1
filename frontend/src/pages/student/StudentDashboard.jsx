@@ -2,40 +2,21 @@ import { useState, useEffect } from "react";
 import Topbar from "../../components/Topbar";
 import StatCard from "../../components/StatCard";
 import { User, Bell, Shield, Activity } from "lucide-react";
-<<<<<<< HEAD
 import { apiGet } from "../../lib/api";
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
 export default function StudentDashboard() {
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
     const [error, setError] = useState(null);
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-<<<<<<< HEAD
                 const data = await apiGet("/api/students/profile");
                 setProfile(data);
             } catch (err) {
                 console.error("Failed to fetch profile", err);
                 setError(err.message || "Unable to load profile");
-=======
-                const token = localStorage.getItem("token");
-                const res = await fetch("http://localhost:5000/api/students/profile", {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    setProfile(data);
-                }
-            } catch (err) {
-                console.error("Failed to fetch profile", err);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             } finally {
                 setLoading(false);
             }
@@ -52,7 +33,6 @@ export default function StudentDashboard() {
         );
     }
 
-<<<<<<< HEAD
     if (error) {
         return (
             <div className="min-h-screen flex items-center justify-center text-center px-6">
@@ -64,8 +44,6 @@ export default function StudentDashboard() {
         );
     }
 
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     return (
         <>
             <Topbar />
@@ -124,11 +102,7 @@ export default function StudentDashboard() {
                             <div className="space-y-1">
                                 <p className="text-sm text-slate-400 font-medium">Joined Date</p>
                                 <p className="text-lg font-semibold text-slate-700">
-<<<<<<< HEAD
                                     {new Date(profile?.student?.createdAt || profile?.student?.created_at).toLocaleDateString()}
-=======
-                                    {new Date(profile?.student?.createdAt).toLocaleDateString()}
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
                                 </p>
                             </div>
                         </div>

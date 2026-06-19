@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Camera, Pencil, Power, Trash2 } from "lucide-react";
 
 export default function CameraCard({ camera, onEdit, onToggleStatus, onDelete }) {
@@ -6,15 +5,6 @@ export default function CameraCard({ camera, onEdit, onToggleStatus, onDelete })
 
   return (
     <div className="bg-white border rounded-xl overflow-hidden flex flex-col">
-=======
-import { Camera } from "lucide-react";
-
-export default function CameraCard({ camera }) {
-  const isActive = camera.status === "Active";
-
-  return (
-    <div className="bg-white border rounded-xl overflow-hidden">
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       <div className="relative bg-slate-100 h-40 flex items-center justify-center">
         <Camera size={48} className="text-slate-300" />
 
@@ -22,22 +12,14 @@ export default function CameraCard({ camera }) {
           className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-semibold
             ${isActive ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600"}`}
         >
-<<<<<<< HEAD
           {camera.status || (isActive ? "Active" : "Offline")}
         </span>
 
         <span className="absolute bottom-3 left-3 bg-slate-700 text-white text-xs px-2 py-1 rounded font-mono truncate max-w-[140px]">
-=======
-          {camera.status}
-        </span>
-
-        <span className="absolute bottom-3 left-3 bg-slate-700 text-white text-xs px-2 py-1 rounded">
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
           {camera.id}
         </span>
       </div>
 
-<<<<<<< HEAD
       <div className="p-4 space-y-2 flex-1">
         <h3 className="font-semibold">{camera.name}</h3>
         <p className="text-sm text-blue-600 break-all">
@@ -71,14 +53,6 @@ export default function CameraCard({ camera }) {
           <Trash2 size={14} />
         </button>
       </div>
-=======
-      <div className="p-4 space-y-2">
-        <h3 className="font-semibold">{camera.name}</h3>
-        <p className="text-sm text-blue-600 break-all">
-          {camera.stream}
-        </p>
-      </div>
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     </div>
   );
 }

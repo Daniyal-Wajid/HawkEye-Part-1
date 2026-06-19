@@ -1,10 +1,7 @@
 {
   "type": "module",
   "dependencies": {
-<<<<<<< HEAD
     "@supabase/supabase-js": "^2.103.0",
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -14,10 +11,6 @@
     "fluent-ffmpeg": "^2.1.3",
     "form-data": "^4.0.5",
     "jsonwebtoken": "^9.0.3",
-<<<<<<< HEAD
-=======
-    "mongoose": "^9.1.1",
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     "multer": "^2.0.2"
   },
   "scripts": {

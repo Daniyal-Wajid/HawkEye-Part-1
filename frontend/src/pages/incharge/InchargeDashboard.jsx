@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useState, useEffect, useCallback } from "react";
 import Topbar from "../../components/Topbar";
 import StatCard from "../../components/StatCard";
@@ -26,14 +25,6 @@ export default function InchargeDashboard() {
     return () => clearInterval(interval);
   }, [fetchSummary]);
 
-=======
-import Topbar from "../../components/Topbar";
-import StatCard from "../../components/StatCard";
-import ViolationsTable from "../../components/ViolationsTableFull";
-import { AlertTriangle, Clock, ShieldAlert, CheckCircle } from "lucide-react";
-
-export default function InchargeDashboard() {
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   return (
     <>
       <Topbar />
@@ -46,52 +37,31 @@ export default function InchargeDashboard() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
-<<<<<<< HEAD
             title="Unverified Camera Violations"
             value={summary ? String(summary.unverifiedViolations) : "—"}
-=======
-            title="Pending Reviews"
-            value="5"
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             icon={<Clock />}
             color="bg-orange-100 text-orange-600"
           />
           <StatCard
-<<<<<<< HEAD
             title="Total Camera Violations"
             value={summary ? String(summary.totalViolations) : "—"}
-=======
-            title="Active Violations"
-            value="12"
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             icon={<ShieldAlert />}
             color="bg-red-100 text-red-600"
           />
           <StatCard
-<<<<<<< HEAD
             title="Today's Camera Violations"
             value={summary ? String(summary.todayViolations) : "—"}
-=======
-            title="Resolved Today"
-            value="8"
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             icon={<CheckCircle />}
             color="bg-green-100 text-green-600"
           />
           <StatCard
-<<<<<<< HEAD
             title="High-severity (camera)"
             value={summary ? String(summary.highSeverityViolations) : "—"}
-=======
-            title="High Priority"
-            value="3"
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             icon={<AlertTriangle />}
             color="bg-yellow-100 text-yellow-600"
           />
         </div>
 
-<<<<<<< HEAD
         {summary && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <StatCard
@@ -117,10 +87,6 @@ export default function InchargeDashboard() {
 
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Recent Camera Violations</h2>
-=======
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Recent Violations</h2>
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
           <ViolationsTable />
         </div>
       </div>

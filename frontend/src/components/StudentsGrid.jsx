@@ -1,46 +1,7 @@
-<<<<<<< HEAD
 import StudentCard from "./StudentCard";
 import { Loader2, AlertCircle } from "lucide-react";
 
 export default function StudentsGrid({ students = [], loading, error, onViewDetails, onEdit }) {
-=======
-import { useState, useEffect } from "react";
-import StudentCard from "./StudentCard";
-import { Loader2, AlertCircle } from "lucide-react";
-
-export default function StudentsGrid() {
-  const [students, setStudents] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:5000/api/students", {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data.error || "Failed to fetch students");
-        }
-
-        setStudents(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStudents();
-  }, []);
-
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -70,16 +31,12 @@ export default function StudentsGrid() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {students.map((student) => (
-<<<<<<< HEAD
         <StudentCard
           key={student._id || student.id}
           student={student}
           onViewDetails={onViewDetails}
           onEdit={onEdit}
         />
-=======
-        <StudentCard key={student._id} student={student} />
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       ))}
     </div>
   );

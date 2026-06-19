@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { Loader2, AlertCircle } from "lucide-react";
 import CameraCard from "./CameraCard";
 
@@ -30,16 +29,6 @@ export default function CamerasGrid({ cameras = [], loading, error, fetchCameras
           onToggleStatus={onToggleStatus}
           onDelete={onDelete}
         />
-=======
-import { cameras } from "../data/mockCameras";
-import CameraCard from "./CameraCard";
-
-export default function CamerasGrid() {
-  return (
-    <div className="grid grid-cols-3 gap-6">
-      {cameras.map((cam) => (
-        <CameraCard key={cam.id} camera={cam} />
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       ))}
     </div>
   );

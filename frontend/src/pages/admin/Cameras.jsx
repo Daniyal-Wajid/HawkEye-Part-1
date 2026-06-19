@@ -1,13 +1,8 @@
-<<<<<<< HEAD
 import { useState, useEffect, useCallback } from "react";
-=======
-import { useState } from "react";
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 import Topbar from "../../components/Topbar";
 import CameraStats from "../../components/CameraStats";
 import CamerasGrid from "../../components/CamerasGrid";
 import LiveRecognitionPanel from "../../components/LiveRecognitionPanel";
-<<<<<<< HEAD
 import AddCameraModal from "../../components/AddCameraModal";
 import { Maximize2, Camera } from "lucide-react";
 import { apiGet, apiPatch, apiDelete } from "../../lib/api";
@@ -77,12 +72,6 @@ export default function Cameras() {
       setError(err.message);
     }
   }, [fetchCameras]);
-=======
-import { Maximize2, Camera } from "lucide-react";
-
-export default function Cameras() {
-  const [showLivePanel, setShowLivePanel] = useState(false);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
   return (
     <>
@@ -92,11 +81,7 @@ export default function Cameras() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold">Cameras Management</h1>
-<<<<<<< HEAD
             <p className="text-slate-500">Manage surveillance and AI detection</p>
-=======
-            <p className="text-slate-500">Manage surveillance and facial recognition</p>
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
           </div>
 
           <div className="flex gap-4">
@@ -105,7 +90,6 @@ export default function Cameras() {
               className="flex items-center gap-2 bg-slate-100 text-slate-800 px-5 py-2.5 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition-all shadow-lg shadow-slate-200"
             >
               <Maximize2 size={18} />
-<<<<<<< HEAD
               {showLivePanel ? "Close AI View" : "Open AI Detection"}
             </button>
             <button
@@ -113,11 +97,6 @@ export default function Cameras() {
               onClick={() => setAddCameraOpen(true)}
               className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
             >
-=======
-              {showLivePanel ? "Close AI View" : "Internal Camera AI"}
-            </button>
-            <button className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200">
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
               <Camera size={18} />
               Add IP Camera
             </button>
@@ -126,7 +105,6 @@ export default function Cameras() {
 
         {showLivePanel && (
           <div className="h-[600px] animate-in zoom-in-95 duration-300">
-<<<<<<< HEAD
             <LiveRecognitionPanel cameras={cameras} onClose={() => setShowLivePanel(false)} />
           </div>
         )}
@@ -153,14 +131,6 @@ export default function Cameras() {
             onSaved={() => { fetchCameras(); setAddCameraOpen(false); }}
           />
         )}
-=======
-            <LiveRecognitionPanel onClose={() => setShowLivePanel(false)} />
-          </div>
-        )}
-
-        <CameraStats />
-        <CamerasGrid />
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       </div>
     </>
   );

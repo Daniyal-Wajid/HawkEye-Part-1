@@ -1,25 +1,14 @@
 // server.js
 import express from "express";
-<<<<<<< HEAD
 import cors from "cors";
 import multer from "multer";
 import path from "path";
 import axios from "axios";
 import fs from "fs";
-=======
-import mongoose from "mongoose";
-import cors from "cors";
-import multer from "multer";
-import dotenv from "dotenv";
-import axios from "axios";
-import fs from "fs";
-import path from "path";
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
 import FormData from "form-data";
 import jwt from "jsonwebtoken";
-<<<<<<< HEAD
 import bcrypt from "bcryptjs";
 
 import { supabase } from "./db/supabase.js";
@@ -360,14 +349,6 @@ async function applyFineIfEligible(
     return { applied: false, reason: "error", error: err.message };
   }
 }
-=======
-
-import Student from "./models/Student.js";
-import User from "./models/User.js";
-import bcrypt from "bcryptjs";
-
-dotenv.config();
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
 const app = express();
 app.use(cors());
@@ -376,7 +357,6 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 const PROCESS_ID = Math.random().toString(36).substring(7).toUpperCase();
-<<<<<<< HEAD
 const AI_SERVER_URL = process.env.AI_SERVER_URL || "http://127.0.0.1:8000";
 const LIVE_RECOGNITION_TIMEOUT_MS = 30000;
 console.log(`[System] Initializing HawkEye Server (Process ID: ${PROCESS_ID})`);
@@ -386,20 +366,13 @@ const hasSupabase = !!(
 console.log(
   `[Supabase] ${hasSupabase ? "Configured (" + process.env.SUPABASE_URL + ")" : "Missing .env (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)"}`,
 );
-=======
-console.log(`[System] Initializing HawkEye Server (Process ID: ${PROCESS_ID})`);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
 // Global Request Logger for diagnostics
 app.use((req, res, next) => {
   if (req.path === "/api/recognition/live") {
-<<<<<<< HEAD
     console.log(
       `[Incoming] ${req.method} ${req.path} (${(req.headers["content-length"] / 1024).toFixed(1)} KB)`,
     );
-=======
-    console.log(`[Incoming] ${req.method} ${req.path} (${(req.headers['content-length'] / 1024).toFixed(1)} KB)`);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   } else {
     console.log(`[Incoming] ${req.method} ${req.path}`);
   }
@@ -412,7 +385,6 @@ app.get("/api/test", (req, res) => {
     message: "HawkEye Server is active",
     processId: PROCESS_ID,
     version: "1.2.0",
-<<<<<<< HEAD
     time: new Date().toISOString(),
   });
 });
@@ -431,18 +403,11 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-=======
-    time: new Date().toISOString()
-  });
-});
-
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 // Simple Health Check for Recognition
 app.get("/api/recognition/health", (req, res) => {
   res.json({ status: "ok", endpoint: "/api/recognition/live", ready: true });
 });
 
-<<<<<<< HEAD
 /* -------------------- IP Camera Stream Proxy (avoids CORS) -------------------- */
 function isAllowedStreamUrl(urlString) {
   try {
@@ -498,8 +463,6 @@ app.get("/api/stream/proxy", (req, res) => {
     });
 });
 
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 /* -------------------- FFmpeg Setup -------------------- */
 ffmpeg.setFfmpegPath(ffmpegPath);
 
@@ -508,20 +471,12 @@ ffmpeg.setFfmpegPath(ffmpegPath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir);
 });
 
-<<<<<<< HEAD
 /* -------------------- Supabase (DB) -------------------- */
 if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
   console.log("[System] Using Supabase for data storage");
 } else {
   console.warn("[System] Supabase env not set; DB calls may fail.");
 }
-=======
-/* -------------------- MongoDB Connection -------------------- */
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("Mongo error:", err));
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
 /* -------------------- Multer Setup -------------------- */
 const storage = multer.diskStorage({
@@ -533,15 +488,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-<<<<<<< HEAD
 // Memory storage for violation video clips (uploaded directly to Supabase Storage)
 const clipUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
 });
 
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 /* -------------------- Convert video to mp4 -------------------- */
 function convertToMp4(inputPath) {
   return new Promise((resolve, reject) => {
@@ -615,7 +567,6 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-<<<<<<< HEAD
     const { data: userRow, error: userErr } = await supabase
       .from("users")
       .select("*")
@@ -633,13 +584,6 @@ const authenticate = async (req, res, next) => {
         .single();
       user.studentId = studentRow ? toClientStudent(studentRow) : null;
     }
-=======
-    const user = await User.findById(decoded.id).populate("studentId");
-    if (!user) {
-      return res.status(401).json({ error: "User not found" });
-    }
-
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     req.user = user;
     next();
   } catch (err) {
@@ -657,7 +601,6 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-<<<<<<< HEAD
 /** Allow AI engine to POST violations without a user JWT. */
 const internalAuth = (req, res, next) => {
   const secret = req.headers["x-ai-secret-key"];
@@ -683,13 +626,10 @@ const internalAuth = (req, res, next) => {
   return authenticate(req, res, next);
 };
 
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 /* -------------------- Login -------------------- */
 app.post("/api/auth/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-<<<<<<< HEAD
     const { data: userRow, error } = await supabase
       .from("users")
       .select("*")
@@ -729,18 +669,6 @@ app.post("/api/auth/login", async (req, res) => {
 
     const token = jwt.sign(
       { id: userRow.id, email: userRow.email, role: userObj.role },
-=======
-    const user = await User.findOne({ email }).populate("studentId");
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-    const userObj = user.toObject();
-    delete userObj.password;
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, email: user.email, role: user.role },
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       process.env.JWT_SECRET,
       { expiresIn: "7d" },
     );
@@ -754,7 +682,6 @@ app.post("/api/auth/login", async (req, res) => {
 /* -------------------- Student Routes -------------------- */
 app.get("/api/students", authenticate, async (req, res) => {
   try {
-<<<<<<< HEAD
     if (req.user.role !== "admin" && req.user.role !== "discipline_incharge") {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -764,13 +691,6 @@ app.get("/api/students", authenticate, async (req, res) => {
       .order("created_at", { ascending: false });
     if (error) throw error;
     res.json((rows || []).map(toClientStudent));
-=======
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Access denied" });
-    }
-    const students = await Student.find();
-    res.json(students);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -781,7 +701,6 @@ app.get("/api/students/profile", authenticate, async (req, res) => {
     if (req.user.role !== "student") {
       return res.status(403).json({ error: "Access denied" });
     }
-<<<<<<< HEAD
     const sid = req.user.studentId?.id ?? req.user.studentId;
     if (!sid)
       return res.status(404).json({ error: "Student profile not found" });
@@ -2121,13 +2040,6 @@ app.post("/api/activity-logs", authenticate, async (req, res) => {
       .single();
     if (error) throw error;
     res.status(201).json(toClientActivityLog(row));
-=======
-    const student = await Student.findById(req.user.studentId);
-    if (!student) {
-      return res.status(404).json({ error: "Student profile not found" });
-    }
-    res.json({ user: req.user, student });
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2136,7 +2048,6 @@ app.post("/api/activity-logs", authenticate, async (req, res) => {
 /* -------------------- Register Student (Self-registration only, no auth required) -------------------- */
 app.post("/api/students/register", upload.single("video"), async (req, res) => {
   try {
-<<<<<<< HEAD
     const { name, rollNumber, email, department, password, confirmPassword } =
       req.body;
 
@@ -2148,11 +2059,6 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
       !password ||
       !confirmPassword
     ) {
-=======
-    const { name, rollNumber, email, password, confirmPassword } = req.body;
-
-    if (!name || !rollNumber || !email || !password || !confirmPassword) {
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       return res.status(400).json({ error: "All fields required" });
     }
 
@@ -2170,7 +2076,6 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
       return res.status(400).json({ error: "Video is required" });
     }
 
-<<<<<<< HEAD
     const { data: existingStudent } = await supabase
       .from("students")
       .select("id")
@@ -2178,21 +2083,11 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
       .maybeSingle();
     if (existingStudent) {
       if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-=======
-    // Check if student already exists
-    const existingStudent = await Student.findOne({ email });
-    if (existingStudent) {
-      // Clean up uploaded file
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       return res
         .status(400)
         .json({ error: "Student with this email already registered" });
     }
 
-<<<<<<< HEAD
     const { data: existingRollNumber } = await supabase
       .from("students")
       .select("id")
@@ -2200,21 +2095,11 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
       .maybeSingle();
     if (existingRollNumber) {
       if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-=======
-    // Check if roll number already exists
-    const existingRollNumber = await Student.findOne({ rollNumber });
-    if (existingRollNumber) {
-      // Clean up uploaded file
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       return res
         .status(400)
         .json({ error: "Student with this roll number already exists" });
     }
 
-<<<<<<< HEAD
     const { data: existingUser } = await supabase
       .from("users")
       .select("id")
@@ -2222,15 +2107,6 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
       .maybeSingle();
     if (existingUser) {
       if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-=======
-    // Check if user account already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      // Clean up uploaded file
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       return res.status(400).json({ error: "User account already exists" });
     }
 
@@ -2261,7 +2137,6 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
       }
     }
 
-<<<<<<< HEAD
     // 2️⃣ Save student to Supabase
     const { data: studentRow, error: studentErr } = await supabase
       .from("students")
@@ -2280,24 +2155,10 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
     // 3️⃣ Create user account for student
     const hashedPassword = await bcrypt.hash(password, 10);
     const { error: userErr } = await supabase.from("users").insert({
-=======
-    // 2️⃣ Save student
-    const student = await Student.create({
-      name,
-      rollNumber,
-      email,
-      videoPath: mp4Path,
-    });
-
-    // 3️⃣ Create user account for student
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await User.create({
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       email,
       password: hashedPassword,
       role: "student",
       name,
-<<<<<<< HEAD
       student_id: studentRow.id,
     });
     if (userErr) throw new Error(userErr.message);
@@ -2312,22 +2173,6 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
         {
           studentId: studentRow.id,
           studentName: name,
-=======
-      studentId: student._id,
-    });
-
-    // 4️⃣ Extract frames (approximately 65 frames from 10-second video)
-    const framesDir = await extractFrames(mp4Path, student._id.toString());
-
-    // 5️⃣ Send ABSOLUTE path to AI server for training
-    // Training can take a long time (processing 65 frames with YOLOv8-face + ArcFace)
-    // Set timeout to 5 minutes (300000ms) - training is async, so this won't block the response
-    axios
-      .post(
-        "http://127.0.0.1:8000/train",
-        {
-          studentId: student._id.toString(),
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
           framesDir: framesDir,
         },
         {
@@ -2336,29 +2181,17 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
       )
       .then(() => {
         console.log(
-<<<<<<< HEAD
           `✅ AI training completed for student: ${student.name} (${studentRow.id})`,
-=======
-          `✅ AI training completed for student: ${student.name} (${student._id})`,
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         );
       })
       .catch((err) => {
         if (err.code === "ECONNABORTED" || err.message.includes("timeout")) {
           console.error(
-<<<<<<< HEAD
             `⚠️ AI training timed out for student ${studentRow.id} - training may still be in progress`,
           );
         } else {
           console.error(
             `⚠️ AI training failed for student ${studentRow.id}:`,
-=======
-            `⚠️ AI training timed out for student ${student._id} - training may still be in progress`,
-          );
-        } else {
-          console.error(
-            `⚠️ AI training failed for student ${student._id}:`,
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
             err.message,
           );
         }
@@ -2391,17 +2224,12 @@ app.post("/api/students/register", upload.single("video"), async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-=======
-
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 /* -------------------- Recognition -------------------- */
 
 /* -------------------- Recognition -------------------- */
 app.post("/api/recognition/live", authenticate, async (req, res) => {
   const { imageBase64 } = req.body;
   if (!imageBase64) {
-<<<<<<< HEAD
     console.log(
       "[Backend] ⚠ Received recognize-live request with no image data",
     );
@@ -2411,13 +2239,6 @@ app.post("/api/recognition/live", authenticate, async (req, res) => {
   console.log(
     `[Backend] 📡 Processing live recognition request (Image Size: ${Math.round(imageBase64.length / 1024)} KB)`,
   );
-=======
-    console.log("[Backend] ⚠ Received recognize-live request with no image data");
-    return res.status(400).json({ error: "Image required" });
-  }
-
-  console.log(`[Backend] 📡 Processing live recognition request (Image Size: ${Math.round(imageBase64.length / 1024)} KB)`);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
   try {
     // base64 → buffer
@@ -2435,7 +2256,6 @@ app.post("/api/recognition/live", authenticate, async (req, res) => {
     // Send to Flask AI
     console.log("[Backend] 🤖 Calling AI Server...");
     const aiRes = await axios.post(
-<<<<<<< HEAD
       `${AI_SERVER_URL}/recognize-live`,
       formData,
       {
@@ -2450,19 +2270,6 @@ app.post("/api/recognition/live", authenticate, async (req, res) => {
 
     const aiResults = aiRes.data.results || [];
     const weaponDetectionsRaw = aiRes.data.weapon_detections || [];
-=======
-      "http://127.0.0.1:8000/recognize-live",
-      formData,
-      {
-        headers: formData.getHeaders(),
-        timeout: 5000, // Reduced from 30s to be more responsive for live view
-      },
-    );
-
-    console.log(`[Backend] ✅ AI Server responded with ${aiRes.data.count || 0} detections`);
-
-    const aiResults = aiRes.data.results || [];
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     const processedRecognitions = [];
     const allDetectedFaces = [];
 
@@ -2474,16 +2281,12 @@ app.post("/api/recognition/live", authenticate, async (req, res) => {
 
       if (recognized && student_id) {
         try {
-<<<<<<< HEAD
           const { data: studentRow } = await supabase
             .from("students")
             .select("*")
             .eq("id", student_id)
             .single();
           const student = studentRow ? toClientStudent(studentRow) : null;
-=======
-          const student = await Student.findById(student_id);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
           if (student) {
             processedRecognitions.push({
               student,
@@ -2495,13 +2298,9 @@ app.post("/api/recognition/live", authenticate, async (req, res) => {
               `✓ Batch Recognized: ${student.name} (${student_id}) at ${(confidence * 100).toFixed(1)}%`,
             );
           } else {
-<<<<<<< HEAD
             console.warn(
               `[Backend] ⚠ AI recognized ID ${student_id} but Student not found in DB`,
             );
-=======
-            console.warn(`[Backend] ⚠ AI recognized ID ${student_id} but Student not found in DB`);
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
           }
         } catch (dbErr) {
           console.error(`Error fetching student ${student_id}:`, dbErr.message);
@@ -2509,7 +2308,6 @@ app.post("/api/recognition/live", authenticate, async (req, res) => {
       }
     }
 
-<<<<<<< HEAD
     // Enrich weapon detections with student names, auto-create violations + fines
     const weaponDetections = [];
     const finesApplied = [];
@@ -2739,20 +2537,15 @@ app.post("/api/recognition/live", authenticate, async (req, res) => {
       dresscodeViolations.push(entry);
     }
 
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     res.json({
       recognized: processedRecognitions.length > 0,
       recognitions: processedRecognitions,
       faces: allDetectedFaces,
       count: aiResults.length,
-<<<<<<< HEAD
       weaponDetections,
       fightDetection,
       dresscodeViolations,
       finesApplied,
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     });
   } catch (err) {
     console.error("Recognition error:", err.message);
@@ -2787,7 +2580,6 @@ app.post("/api/recognition/single", authenticate, async (req, res) => {
     const { imageBase64 } = req.body;
     if (!imageBase64) return res.status(400).json({ error: "Image required" });
 
-<<<<<<< HEAD
     const buffer = Buffer.from(
       imageBase64.replace(/^data:image\/\w+;base64,/, ""),
       "base64",
@@ -2806,16 +2598,6 @@ app.post("/api/recognition/single", authenticate, async (req, res) => {
         timeout: 30000,
       },
     );
-=======
-    const buffer = Buffer.from(imageBase64.replace(/^data:image\/\w+;base64,/, ""), "base64");
-    const formData = new FormData();
-    formData.append("frame", buffer, { filename: "frame.jpg", contentType: "image/jpeg" });
-
-    const aiRes = await axios.post("http://127.0.0.1:8000/recognize-live", formData, {
-      headers: formData.getHeaders(),
-      timeout: 30000,
-    });
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
     const results = aiRes.data.results || [];
     if (results.length === 0) return res.json({ recognized: false, faces: [] });
@@ -2825,7 +2607,6 @@ app.post("/api/recognition/single", authenticate, async (req, res) => {
       .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0];
 
     if (bestRec) {
-<<<<<<< HEAD
       const { data: studentRow } = await supabase
         .from("students")
         .select("*")
@@ -2850,37 +2631,23 @@ app.post("/api/recognition/single", authenticate, async (req, res) => {
           w: r.bbox[2],
           h: r.bbox[3],
         })),
-=======
-      const student = await Student.findById(bestRec.student_id);
-      return res.json({
-        recognized: true,
-        student: student || { _id: bestRec.student_id, name: "Unknown" },
-        confidence: bestRec.confidence,
-        faceBox: { x: bestRec.bbox[0], y: bestRec.bbox[1], w: bestRec.bbox[2], h: bestRec.bbox[3] },
-        faces: results.map((r) => ({ x: r.bbox[0], y: r.bbox[1], w: r.bbox[2], h: r.bbox[3] })),
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       });
     }
 
     res.json({
       recognized: false,
-<<<<<<< HEAD
       faces: results.map((r) => ({
         x: r.bbox[0],
         y: r.bbox[1],
         w: r.bbox[2],
         h: r.bbox[3],
       })),
-=======
-      faces: results.map((r) => ({ x: r.bbox[0], y: r.bbox[1], w: r.bbox[2], h: r.bbox[3] })),
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     });
   } catch (err) {
     res.status(500).json({ error: "Recognition failed", details: err.message });
   }
 });
 
-<<<<<<< HEAD
 /* -------------------- AI Server Proxy (authenticated) -------------------- */
 function verifyTokenFromQuery(req) {
   const token =
@@ -3093,8 +2860,6 @@ app.get(
   },
 );
 
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 /* -------------------- Error Handling Middleware -------------------- */
 // Catch-all error handler - always return JSON
 app.use((err, req, res, next) => {
@@ -3112,7 +2877,6 @@ app.use((req, res) => {
 
 /* -------------------- Server -------------------- */
 const PORT = process.env.PORT || 5000;
-<<<<<<< HEAD
 const server = app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`📋 Available routes:`);
@@ -3173,13 +2937,3 @@ server.on("error", (err) => {
     console.warn("[Storage] Bucket init error:", e.message);
   }
 })();
-=======
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📋 Available routes:`);
-  console.log(`   POST /api/auth/login`);
-  console.log(`   POST /api/students/register (Image registration)`);
-  console.log(`   POST /api/recognition/live`);
-  console.log(`   POST /api/recognition/single`);
-});
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b

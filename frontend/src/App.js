@@ -18,19 +18,13 @@ import PolicyRules from "./pages/admin/PolicyRules";
 import Students from "./pages/admin/Students";
 import UsersPage from "./pages/admin/Users";
 import Violations from "./pages/admin/Violations";
-<<<<<<< HEAD
 import ManualViolations from "./pages/admin/ManualViolations";
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
 /* Discipline Incharge pages */
 import InchargeDashboard from "./pages/incharge/InchargeDashboard";
 import InchargeViolations from "./pages/incharge/InchargeViolations";
-<<<<<<< HEAD
 import InchargeManualViolations from "./pages/incharge/InchargeManualViolations";
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 import InchargeStudents from "./pages/incharge/InchargeStudents";
 import InchargeNotifications from "./pages/incharge/InchargeNotifications";
 import ReviewQueue from "./pages/incharge/ReviewQueue";
@@ -48,11 +42,7 @@ export default function App() {
 
         {/* Admin Layout */}
         <Route element={<DashboardLayout sidebarItems={adminSidebarItems} />}>
-<<<<<<< HEAD
           <Route path="/" element={<Navigate to="/login" replace />} />
-=======
-          <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/cameras" element={<Cameras />} />
@@ -62,20 +52,14 @@ export default function App() {
           <Route path="/students" element={<Students />} />
           <Route path="/users" element={<UsersPage />} />
           <Route path="/violations" element={<Violations />} />
-<<<<<<< HEAD
           <Route path="/manual-violations" element={<ManualViolations />} />
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         </Route>
 
         {/* Discipline Incharge Layout */}
         <Route element={<DashboardLayout sidebarItems={inchargeSidebarItems} />}>
           <Route path="/incharge/dashboard" element={<InchargeDashboard />} />
           <Route path="/incharge/violations" element={<InchargeViolations />} />
-<<<<<<< HEAD
           <Route path="/incharge/manual-violations" element={<InchargeManualViolations />} />
-=======
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
           <Route path="/incharge/students" element={<InchargeStudents />} />
           <Route path="/incharge/notifications" element={<InchargeNotifications />} />
           <Route path="/incharge/reviews" element={<ReviewQueue />} />

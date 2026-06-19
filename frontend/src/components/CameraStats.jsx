@@ -1,6 +1,5 @@
 import { Camera, Circle } from "lucide-react";
 
-<<<<<<< HEAD
 export default function CameraStats({ totalCameras = 0, active = 0, offline = 0, loading }) {
   if (loading) {
     return (
@@ -18,9 +17,6 @@ export default function CameraStats({ totalCameras = 0, active = 0, offline = 0,
     );
   }
 
-=======
-export default function CameraStats() {
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   return (
     <div className="grid grid-cols-3 gap-6">
       <div className="bg-white border rounded-xl p-6 flex items-center gap-4">
@@ -29,11 +25,7 @@ export default function CameraStats() {
         </div>
         <div>
           <p className="text-sm text-slate-500">Total Cameras</p>
-<<<<<<< HEAD
           <p className="text-2xl font-bold">{totalCameras}</p>
-=======
-          <p className="text-2xl font-bold">5</p>
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         </div>
       </div>
 
@@ -43,11 +35,7 @@ export default function CameraStats() {
         </div>
         <div>
           <p className="text-sm text-slate-500">Active</p>
-<<<<<<< HEAD
           <p className="text-2xl font-bold">{active}</p>
-=======
-          <p className="text-2xl font-bold">4</p>
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         </div>
       </div>
 
@@ -57,11 +45,7 @@ export default function CameraStats() {
         </div>
         <div>
           <p className="text-sm text-slate-500">Offline</p>
-<<<<<<< HEAD
           <p className="text-2xl font-bold">{offline}</p>
-=======
-          <p className="text-2xl font-bold">1</p>
->>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
         </div>
       </div>
     </div>
