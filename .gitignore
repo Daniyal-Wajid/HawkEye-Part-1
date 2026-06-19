@@ -6,6 +6,10 @@ dist/
 build/
 npm-debug.log*
 yarn-error.log*
+<<<<<<< HEAD
+pnpm-debug.log*
+=======
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
 # =========================
 # Python / AI / Backend
@@ -17,7 +21,14 @@ __pycache__/
 venv/
 env/
 .venv/
+<<<<<<< HEAD
+ai/venv
 pip-wheel-metadata/
+
+# Backend runtime folders (generated files)
+=======
+pip-wheel-metadata/
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 backend/uploads/
 backend/frames/
 
@@ -29,7 +40,11 @@ backend/frames/
 .env.*.local
 
 # =========================
+<<<<<<< HEAD
+# AI Models & Data (VERY IMPORTANT)
+=======
 # AI Models & Data
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 # =========================
 *.h5
 *.pt
@@ -37,7 +52,19 @@ backend/frames/
 *.onnx
 *.pkl
 models/
+<<<<<<< HEAD
+
+# datasets + outputs (your issue fix)
 datasets/
+new dataset/
+results/
+test/
+frames/
+output/
+outputs/
+=======
+datasets/
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
 # =========================
 # Logs
@@ -54,4 +81,18 @@ Thumbs.db
 .vscode/
 *.swp
 
+<<<<<<< HEAD
+# =========================
+# Archives / Documents (IMPORTANT FIX)
+# =========================
+*.zip
+*.rar
+*.7z
 
+*.pdf
+*.docx
+*.pptx
+*.xlsx
+=======
+
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b

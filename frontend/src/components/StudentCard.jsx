@@ -1,6 +1,14 @@
+<<<<<<< HEAD
+import { Eye, User, Pencil } from "lucide-react";
+
+export default function StudentCard({ student, onViewDetails, onEdit }) {
+  const id = student._id || student.id;
+
+=======
 import { Eye, User } from "lucide-react";
 
 export default function StudentCard({ student }) {
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   return (
     <div className="bg-white border rounded-xl p-5 flex flex-col">
       <div className="flex items-center gap-4">
@@ -27,6 +35,28 @@ export default function StudentCard({ student }) {
           Registered ID
         </div>
         <div className="text-xs font-mono text-slate-500">
+<<<<<<< HEAD
+          {String(id).slice(-8).toUpperCase()}
+        </div>
+      </div>
+
+      <div className="mt-6 flex gap-2">
+        <button
+          type="button"
+          onClick={() => onViewDetails?.(student)}
+          className="flex-1 flex items-center justify-center gap-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98]"
+        >
+          <Eye size={16} /> View Details
+        </button>
+        <button
+          type="button"
+          onClick={() => onEdit?.(student)}
+          className="flex items-center justify-center gap-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl px-4 py-3 text-sm font-bold transition-all"
+        >
+          <Pencil size={16} /> Edit
+        </button>
+      </div>
+=======
           {student._id.slice(-8).toUpperCase()}
         </div>
       </div>
@@ -34,6 +64,7 @@ export default function StudentCard({ student }) {
       <button className="mt-6 flex items-center justify-center gap-2 bg-slate-50 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98]">
         <Eye size={16} /> View Details
       </button>
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     </div>
   );
 }

@@ -1,8 +1,22 @@
+<<<<<<< HEAD
+import { useState } from "react";
+import Topbar from "../../components/Topbar";
+import PolicyRulesGrid from "../../components/PolicyRulesGrid";
+import AddRuleModal from "../../components/AddRuleModal";
+
+export default function PolicyRules() {
+  const [showAdd, setShowAdd] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleSaved = () => setRefreshKey((k) => k + 1);
+
+=======
 import Topbar from "../../components/Topbar";
 import PolicyRulesGrid from "../../components/PolicyRulesGrid";
 import { Play } from "lucide-react";
 
 export default function PolicyRules() {
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   return (
     <>
       <Topbar />
@@ -16,6 +30,24 @@ export default function PolicyRules() {
             </p>
           </div>
 
+<<<<<<< HEAD
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            + Add Rule
+          </button>
+        </div>
+
+        <PolicyRulesGrid key={refreshKey} />
+
+        {showAdd && (
+          <AddRuleModal
+            onClose={() => setShowAdd(false)}
+            onSaved={handleSaved}
+          />
+        )}
+=======
           <div className="flex gap-3">
             <button className="flex items-center gap-2 border px-4 py-2 rounded-lg hover:bg-slate-50">
               <Play size={16} />
@@ -29,6 +61,7 @@ export default function PolicyRules() {
         </div>
 
         <PolicyRulesGrid />
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       </div>
     </>
   );

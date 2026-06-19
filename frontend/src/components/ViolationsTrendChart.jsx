@@ -12,7 +12,11 @@ export default function ViolationsTrendChart({ data }) {
   return (
     <div className="bg-white border rounded-xl p-6">
       <h3 className="text-lg font-semibold mb-4">
+<<<<<<< HEAD
+        Camera Violations Trend (Last 7 Days)
+=======
         Violations Trend (Last 7 Days)
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
       </h3>
 
       <ResponsiveContainer width="100%" height={250}>

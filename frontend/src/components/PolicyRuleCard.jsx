@@ -1,7 +1,20 @@
+<<<<<<< HEAD
+import { Pencil, Trash2 } from "lucide-react";
+import SeverityBadge from "./SeverityBadge";
+
+export default function PolicyRuleCard({ rule, onEdit, onDelete }) {
+  const handleDelete = () => {
+    if (window.confirm(`Delete rule "${rule.title}"? This cannot be undone.`)) {
+      onDelete?.(rule);
+    }
+  };
+
+=======
 import { Pencil } from "lucide-react";
 import SeverityBadge from "./SeverityBadge";
 
 export default function PolicyRuleCard({ rule }) {
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
   return (
     <div className="bg-white border rounded-xl p-6 flex flex-col justify-between">
       <div className="space-y-3">
@@ -10,10 +23,21 @@ export default function PolicyRuleCard({ rule }) {
           <SeverityBadge level={rule.severity} />
         </div>
 
+<<<<<<< HEAD
+        {rule.violation_type && (
+          <div className="text-sm text-slate-500 flex justify-between">
+            <span>Violation Type</span>
+            <span className="font-medium text-slate-700 uppercase tracking-wide text-xs bg-slate-100 px-2 py-0.5 rounded">
+              {rule.violation_type}
+            </span>
+          </div>
+        )}
+=======
         <div className="text-sm text-slate-500 flex justify-between">
           <span>Rule ID</span>
           <span className="font-medium text-slate-700">{rule.id}</span>
         </div>
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
 
         <div className="text-sm text-slate-500 flex justify-between">
           <span>Penalty Amount</span>
@@ -23,10 +47,31 @@ export default function PolicyRuleCard({ rule }) {
         </div>
       </div>
 
+<<<<<<< HEAD
+      <div className="mt-6 flex gap-2">
+        <button
+          type="button"
+          onClick={() => onEdit?.(rule)}
+          className="flex-1 flex items-center justify-center gap-2 border rounded-lg py-2 hover:bg-slate-50"
+        >
+          <Pencil size={16} />
+          Edit Rule
+        </button>
+        <button
+          type="button"
+          onClick={handleDelete}
+          className="flex items-center justify-center gap-2 border border-red-200 rounded-lg py-2 px-4 hover:bg-red-50 text-red-600"
+          title="Delete rule"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
+=======
       <button className="mt-6 flex items-center justify-center gap-2 border rounded-lg py-2 hover:bg-slate-50">
         <Pencil size={16} />
         Edit Rule
       </button>
+>>>>>>> a044002ed30c4560c21643524cf71c40799ff22b
     </div>
   );
 }
