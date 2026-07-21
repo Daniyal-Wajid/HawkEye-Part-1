@@ -96,15 +96,6 @@ Features:
 - Policy-based verification.
 - Violation recording.
 
-
-## Smoking Detection
-
-The system identifies smoking-related activities in restricted areas.
-
-
-Future violation categories can be added by training additional AI models.
-
-
 ---
 
 # 3. Student Identification and Profile Management
