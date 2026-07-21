@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Camera, X, Shield, ShieldAlert, Activity, RefreshCw, Receipt, Play, Square, Pause, Settings, Upload, Film, Loader2, CheckCircle } from "lucide-react";
+import { Camera, X, Shield, ShieldAlert, Activity, RefreshCw, Receipt, Play, Square, Pause, Settings, Upload, Film, Loader2, CheckCircle, Circle } from "lucide-react";
 import {
     API_BASE,
     authHeaders,
@@ -28,6 +28,19 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
     const [offlineOutputUrl, setOfflineOutputUrl] = useState(null);
     const [offlineStats, setOfflineStats] = useState(null);
     const offlineFileRef = useRef(null);
+    const offlinePreviewRef = useRef(null);
+    const offlineStreamRef = useRef(null);
+    const offlineRecorderRef = useRef(null);
+    const offlineRecordChunksRef = useRef([]);
+    const offlineRecordTimerRef = useRef(null);
+    const offlineJobActiveRef = useRef(false);
+    const offlineOutputPathRef = useRef(null);
+    const [offlineResults, setOfflineResults] = useState(null);
+    const [offlineVideoError, setOfflineVideoError] = useState("");
+    const [offlineRecording, setOfflineRecording] = useState(false);
+    const [offlineRecordSeconds, setOfflineRecordSeconds] = useState(0);
+    const [offlinePreviewActive, setOfflinePreviewActive] = useState(false);
+    const OFFLINE_RECORD_MAX_SEC = 10;
     const [settings, setSettings] = useState({
         conf_threshold: 0.72,
         fight_threshold: 0.72,
@@ -71,6 +84,7 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
             stopRecognition();
             stopCamera();
             stopPipeline();
+            stopOfflinePreview();
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -80,6 +94,9 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
         stopRecognition();
         stopCamera();
         stopPipeline();
+        if (sourceType !== "offline") {
+            stopOfflinePreview();
+        }
         setIsActive(false);
         setError("");
 
@@ -88,18 +105,90 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
         }
     }, [sourceType]);
 
+    const applyOfflineResultsFromStats = (data) => {
+        setOfflineResults({
+            weapons: data.offline_weapon_summary || "",
+            weaponTotal: data.offline_weapon_total || 0,
+            faces: data.offline_faces_summary || "",
+            faceTotal: data.offline_face_total || 0,
+            fight: Boolean(data.offline_fight_detected),
+            fightConf: data.offline_fight_max_conf || 0,
+            fightFrames: data.offline_fight_frames || 0,
+            dresscode: data.offline_dresscode_summary || "",
+            dresscodeTotal: data.offline_dresscode_total || 0,
+            processedFrames: data.processed_frames || 0,
+        });
+        // Keep overlay badges off offline playback — results live in the sidebar only.
+        setWeaponDetections([]);
+        setFightDetection(null);
+        setDresscodeViolations([]);
+    };
+
+    const buildOfflineVideoUrl = (outputPath) => {
+        if (!outputPath) return null;
+        const base = aiProcessedVideoUrl(outputPath, { withToken: true });
+        return `${base}&t=${Date.now()}`;
+    };
+
+    const finishOfflineJob = (data) => {
+        offlineJobActiveRef.current = false;
+        setOfflineProcessing(false);
+        setError("");
+        applyOfflineResultsFromStats(data);
+
+        if (pipelinePollRef.current) {
+            clearInterval(pipelinePollRef.current);
+            pipelinePollRef.current = null;
+        }
+
+        const outputPath =
+            offlineOutputPathRef.current ||
+            data.offline_output_file ||
+            null;
+
+        if (!outputPath) {
+            setOfflineOutputUrl(null);
+            setOfflineVideoError("Processed video path missing");
+            return;
+        }
+
+        setOfflineVideoError("");
+        setOfflineOutputUrl(buildOfflineVideoUrl(outputPath));
+    };
+
     const pollPipelineStats = async () => {
         try {
             const data = await aiGet("/stats");
             setPipelineStats(data);
             setOfflineStats(data);
-            const running = data.status === "running" || data.status === "paused";
+            const status = String(data.status || "");
+            const progress = Number(data.progress || 0);
+            const running = status === "running" || status === "paused";
             setPipelineRunning(running);
-            const processing = String(data.status || "").includes("processing") || data.status === "converting format" || data.status === "processing_offline";
-            if (processing) setOfflineProcessing(true);
-            else if (data.status === "stopped" && offlineProcessing && (data.progress >= 99 || data.processed_frames > 0)) {
+
+            if (!offlineJobActiveRef.current) return;
+
+            if (status.startsWith("error")) {
+                offlineJobActiveRef.current = false;
                 setOfflineProcessing(false);
+                if (pipelinePollRef.current) {
+                    clearInterval(pipelinePollRef.current);
+                    pipelinePollRef.current = null;
+                }
+                setError(status.replace(/^error:\s*/i, "Processing failed: "));
+                return;
             }
+
+            if (status === "offline_complete" || (status === "stopped" && progress >= 99)) {
+                finishOfflineJob(data);
+                return;
+            }
+
+            const stillProcessing =
+                status === "processing_offline" ||
+                status === "converting format" ||
+                status.includes("processing");
+            setOfflineProcessing(stillProcessing);
         } catch {
             /* ignore */
         }
@@ -171,26 +260,162 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
             setError("Unsupported format. Use MP4, AVI, MOV, MKV, or WEBM.");
             return;
         }
+        stopOfflinePreview();
         setError("");
         setOfflineUploading(true);
         setOfflineOutputUrl(null);
+        setOfflineResults(null);
         setOfflineProcessing(false);
+        setOfflineVideoError("");
+        setWeaponDetections([]);
+        setFightDetection(null);
+        setDresscodeViolations([]);
+        offlineJobActiveRef.current = false;
+        offlineOutputPathRef.current = null;
         try {
             const data = await aiUploadVideo(file);
             if (!data.ok) throw new Error(data.error || "Upload failed");
+            offlineJobActiveRef.current = true;
+            offlineOutputPathRef.current = data.output_url || null;
             setOfflineProcessing(true);
-            if (!pipelinePollRef.current) {
-                pipelinePollRef.current = setInterval(pollPipelineStats, 1500);
-            }
-            if (data.output_url) {
-                setOfflineOutputUrl(aiProcessedVideoUrl(data.output_url));
-            }
+            if (pipelinePollRef.current) clearInterval(pipelinePollRef.current);
+            pipelinePollRef.current = setInterval(pollPipelineStats, 1500);
+            pollPipelineStats();
         } catch (err) {
             setError(err.message);
+            offlineJobActiveRef.current = false;
         } finally {
             setOfflineUploading(false);
         }
     };
+
+    const stopOfflinePreview = () => {
+        if (offlineRecordTimerRef.current) {
+            clearInterval(offlineRecordTimerRef.current);
+            offlineRecordTimerRef.current = null;
+        }
+        if (offlineRecorderRef.current) {
+            offlineRecorderRef.current.onstop = null;
+            if (offlineRecorderRef.current.state !== "inactive") {
+                try {
+                    offlineRecorderRef.current.stop();
+                } catch {
+                    /* ignore */
+                }
+            }
+            offlineRecorderRef.current = null;
+        }
+        offlineRecordChunksRef.current = [];
+        if (offlineStreamRef.current) {
+            offlineStreamRef.current.getTracks().forEach((track) => track.stop());
+            offlineStreamRef.current = null;
+        }
+        if (offlinePreviewRef.current) {
+            offlinePreviewRef.current.srcObject = null;
+        }
+        setOfflineRecording(false);
+        setOfflineRecordSeconds(0);
+        setOfflinePreviewActive(false);
+    };
+
+    const finalizeOfflineRecording = () => {
+        const chunks = offlineRecordChunksRef.current;
+        offlineRecordChunksRef.current = [];
+        if (offlineStreamRef.current) {
+            offlineStreamRef.current.getTracks().forEach((track) => track.stop());
+            offlineStreamRef.current = null;
+        }
+        if (offlinePreviewRef.current) {
+            offlinePreviewRef.current.srcObject = null;
+        }
+        offlineRecorderRef.current = null;
+        setOfflinePreviewActive(false);
+        setOfflineRecording(false);
+        setOfflineRecordSeconds(0);
+
+        if (!chunks.length) {
+            setError("Recording failed — no video data captured.");
+            return;
+        }
+
+        const mime = chunks[0]?.type || "video/webm";
+        const blob = new Blob(chunks, { type: mime });
+        const ext = mime.includes("mp4") ? "mp4" : "webm";
+        const file = new File([blob], `offline_clip_${Date.now()}.${ext}`, { type: mime });
+        handleOfflineUpload(file);
+    };
+
+    const stopOfflineRecording = () => {
+        if (offlineRecordTimerRef.current) {
+            clearInterval(offlineRecordTimerRef.current);
+            offlineRecordTimerRef.current = null;
+        }
+        setOfflineRecording(false);
+        const recorder = offlineRecorderRef.current;
+        if (recorder && recorder.state !== "inactive") {
+            recorder.stop();
+        } else {
+            finalizeOfflineRecording();
+        }
+    };
+
+    const startOfflineRecording = async () => {
+        if (offlineUploading || offlineProcessing || offlineRecording) return;
+        if (!navigator.mediaDevices?.getUserMedia) {
+            setError("Camera recording is not supported in this browser.");
+            return;
+        }
+
+        setError("");
+        stopOfflinePreview();
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { width: 1280, height: 720 },
+                audio: false,
+            });
+            offlineStreamRef.current = stream;
+            setOfflinePreviewActive(true);
+
+            const preferredTypes = [
+                "video/webm;codecs=vp9",
+                "video/webm;codecs=vp8",
+                "video/webm",
+            ];
+            const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type)) || "";
+            offlineRecordChunksRef.current = [];
+            const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+            offlineRecorderRef.current = recorder;
+            recorder.ondataavailable = (event) => {
+                if (event.data?.size > 0) {
+                    offlineRecordChunksRef.current.push(event.data);
+                }
+            };
+            recorder.onstop = finalizeOfflineRecording;
+            recorder.start(250);
+
+            setOfflineRecording(true);
+            setOfflineRecordSeconds(0);
+
+            let elapsed = 0;
+            offlineRecordTimerRef.current = setInterval(() => {
+                elapsed += 1;
+                setOfflineRecordSeconds(elapsed);
+                if (elapsed >= OFFLINE_RECORD_MAX_SEC) {
+                    stopOfflineRecording();
+                }
+            }, 1000);
+        } catch (err) {
+            setError(err.message || "Webcam access denied. Please check permissions.");
+            stopOfflinePreview();
+        }
+    };
+
+    useEffect(() => {
+        if (offlinePreviewRef.current && offlineStreamRef.current) {
+            offlinePreviewRef.current.srcObject = offlineStreamRef.current;
+        }
+    }, [offlinePreviewActive, offlineRecording]);
 
     const verifyBackend = async () => {
         try {
@@ -357,12 +582,20 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
                         console.log(`[Detection] Dresscode: ${data.dresscodeViolations.map(d => d.type).join(", ")}`);
                     }
 
-                    // Upload frame-based clip for every violation / review-queue entry created
-                    if (data.weaponDetections?.length > 0) {
-                        for (const w of data.weaponDetections) {
-                            const vid = w.violationId || w.reviewViolationId;
-                            if (vid) uploadFramesAsClip(vid);
-                        }
+                    // Upload frame-based clip for every violation created this frame
+                    const clipViolationIds = new Set();
+                    for (const w of data.weaponDetections || []) {
+                        const vid = w.violationId || w.reviewViolationId;
+                        if (vid) clipViolationIds.add(vid);
+                    }
+                    if (data.fightDetection?.violationId) {
+                        clipViolationIds.add(data.fightDetection.violationId);
+                    }
+                    for (const dc of data.dresscodeViolations || []) {
+                        if (dc.violationId) clipViolationIds.add(dc.violationId);
+                    }
+                    for (const vid of clipViolationIds) {
+                        uploadFramesAsClip(vid);
                     }
 
                     setRecognitions(data.recognitions || []);
@@ -562,19 +795,72 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
                         className="w-full h-full object-contain opacity-90"
                     />
                 ) : sourceType === 'offline' ? (
-                    offlineOutputUrl && !offlineProcessing ? (
-                        <video src={offlineOutputUrl} controls className="w-full h-full object-contain bg-black" />
+                    offlinePreviewActive ? (
+                        <>
+                            <video
+                                ref={offlinePreviewRef}
+                                autoPlay
+                                muted
+                                playsInline
+                                className="w-full h-full object-cover bg-black"
+                            />
+                            {offlineRecording && (
+                                <div className="absolute top-6 right-6 flex items-center gap-2 bg-red-600/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-red-400 z-10">
+                                    <Circle size={10} className="fill-white text-white animate-pulse" />
+                                    <span className="text-xs font-bold text-white">
+                                        REC {offlineRecordSeconds}s / {OFFLINE_RECORD_MAX_SEC}s
+                                    </span>
+                                </div>
+                            )}
+                        </>
+                    ) : offlineOutputUrl && !offlineProcessing ? (
+                        <video
+                            key={offlineOutputUrl}
+                            src={offlineOutputUrl}
+                            controls
+                            autoPlay={false}
+                            preload="metadata"
+                            playsInline
+                            className="w-full h-full object-contain bg-black"
+                            onError={() => setOfflineVideoError("Could not play the processed video in the panel.")}
+                        />
                     ) : (
                         <div className="flex flex-col items-center justify-center text-slate-400 gap-3 p-8">
                             {offlineProcessing ? (
                                 <>
                                     <Loader2 className="animate-spin text-blue-400" size={48} />
-                                    <p className="font-bold text-white">Processing video… {Math.round(offlineStats?.progress || 0)}%</p>
+                                    <p className="font-bold text-white">
+                                        {offlineStats?.status === "converting format" ||
+                                        (Number(offlineStats?.progress || 0) >= 100 && String(offlineStats?.status || "").includes("processing"))
+                                            ? "Finalizing video…"
+                                            : `Processing video… ${Number(offlineStats?.progress || 0).toFixed(1)}%`}
+                                    </p>
+                                </>
+                            ) : offlineVideoError ? (
+                                <>
+                                    <ShieldAlert className="text-red-400" size={48} />
+                                    <p className="font-bold text-red-300 text-center">{offlineVideoError}</p>
+                                    {offlineOutputPathRef.current && (
+                                        <a
+                                            href={aiProcessedVideoUrl(offlineOutputPathRef.current, { withToken: true })}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-xs text-blue-400 underline"
+                                        >
+                                            Try opening video directly
+                                        </a>
+                                    )}
+                                </>
+                            ) : offlineResults ? (
+                                <>
+                                    <CheckCircle className="text-emerald-400" size={48} />
+                                    <p className="font-bold text-white">Analysis complete</p>
+                                    <p className="text-xs text-slate-400 text-center">Processed video will appear here when ready</p>
                                 </>
                             ) : (
                                 <>
                                     <Film size={48} className="opacity-50" />
-                                    <p>Upload a clip to analyze offline</p>
+                                    <p>Upload or record a clip to analyze offline</p>
                                 </>
                             )}
                         </div>
@@ -597,7 +883,7 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
                     className={`absolute inset-0 pointer-events-none w-full h-full ${sourceType === 'pipeline' || sourceType === 'offline' ? 'hidden' : ''}`}
                 />
 
-                {!isActive && !error && (
+                {!isActive && !error && sourceType !== 'offline' && sourceType !== 'pipeline' && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
                         <Camera size={48} className="mb-4 opacity-50" />
                         <p>Camera Off</p>
@@ -621,8 +907,8 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
                     </span>
                 </div>
 
-                {/* Fight alert banner */}
-                {fightDetection?.detected && (
+                {/* Violation overlays — live modes only (not offline processed video) */}
+                {sourceType !== 'offline' && fightDetection?.detected && (
                     <div className="absolute top-20 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-orange-600/95 backdrop-blur-md px-4 py-2 rounded-xl border-2 border-orange-400 z-20 shadow-lg">
                         <ShieldAlert className="text-white" size={20} />
                         <span className="text-sm font-bold text-white">
@@ -631,8 +917,7 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
                     </div>
                 )}
 
-                {/* Dresscode alert banner */}
-                {dresscodeViolations.length > 0 && (
+                {sourceType !== 'offline' && dresscodeViolations.length > 0 && (
                     <div className="absolute top-32 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-purple-600/95 backdrop-blur-md px-4 py-2 rounded-xl border-2 border-purple-400 z-20 shadow-lg">
                         <ShieldAlert className="text-white" size={20} />
                         <span className="text-sm font-bold text-white">
@@ -641,8 +926,7 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
                     </div>
                 )}
 
-                {/* Weapon alert banner */}
-                {weaponDetections.length > 0 && (
+                {sourceType !== 'offline' && weaponDetections.length > 0 && (
                     <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-red-600/95 backdrop-blur-md px-4 py-2 rounded-xl border-2 border-red-400 z-20 shadow-lg">
                         <ShieldAlert className="text-white" size={20} />
                         <span className="text-sm font-bold text-white">
@@ -666,20 +950,20 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
                 )}
             </div>
 
-            {/* Control Panel */}
-            <div className="w-full md:w-80 p-8 flex flex-col justify-between bg-slate-900 border-l border-white/10">
-                <div className="space-y-8">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <h2 className="text-2xl font-black text-white italic tracking-tighter">Hawk<span className="text-blue-500">Eye</span></h2>
-                            <p className="text-slate-400 text-sm font-semibold mt-1">Real-time Recognition</p>
-                        </div>
-                        <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-slate-400">
-                            <X size={20} />
-                        </button>
+            {/* Control Panel — scrollable sidebar */}
+            <div className="w-full md:w-80 flex flex-col min-h-0 max-h-[70vh] md:max-h-none md:h-full bg-slate-900 border-l border-white/10">
+                <div className="shrink-0 px-8 pt-8 pb-4 flex justify-between items-start">
+                    <div>
+                        <h2 className="text-2xl font-black text-white italic tracking-tighter">Hawk<span className="text-blue-500">Eye</span></h2>
+                        <p className="text-slate-400 text-sm font-semibold mt-1">Real-time Recognition</p>
                     </div>
+                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-colors text-slate-400">
+                        <X size={20} />
+                    </button>
+                </div>
 
-                    <div className="space-y-4">
+                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-8 pb-4">
+                <div className="space-y-8">
                         {/* Source Switcher */}
                         <div className="flex flex-wrap bg-slate-800 p-1 rounded-xl gap-1">
                             {[
@@ -785,17 +1069,89 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
                                 <input ref={offlineFileRef} type="file" accept="video/*" className="hidden" onChange={(e) => handleOfflineUpload(e.target.files?.[0])} />
                                 <button
                                     onClick={() => offlineFileRef.current?.click()}
-                                    disabled={offlineUploading || offlineProcessing}
+                                    disabled={offlineUploading || offlineProcessing || offlineRecording}
                                     className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white py-3 rounded-xl text-xs font-bold"
                                 >
                                     {offlineUploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
                                     {offlineUploading ? "Uploading…" : offlineProcessing ? "Processing…" : "Upload & Analyze Video"}
                                 </button>
+
+                                <div className="relative">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <div className="w-full border-t border-slate-700" />
+                                    </div>
+                                    <div className="relative flex justify-center text-[10px] uppercase">
+                                        <span className="bg-slate-800 px-2 text-slate-500">or</span>
+                                    </div>
+                                </div>
+
+                                <p className="text-[10px] text-slate-400">
+                                    Record a short clip with your webcam (max {OFFLINE_RECORD_MAX_SEC} seconds).
+                                </p>
+                                {!offlineRecording ? (
+                                    <button
+                                        onClick={startOfflineRecording}
+                                        disabled={offlineUploading || offlineProcessing}
+                                        className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white py-3 rounded-xl text-xs font-bold"
+                                    >
+                                        <Circle size={14} className="fill-white" />
+                                        Record {OFFLINE_RECORD_MAX_SEC}s Clip
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={stopOfflineRecording}
+                                        className="w-full flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 text-white py-3 rounded-xl text-xs font-bold"
+                                    >
+                                        <Square size={14} />
+                                        Stop & Upload ({Math.max(0, OFFLINE_RECORD_MAX_SEC - offlineRecordSeconds)}s left)
+                                    </button>
+                                )}
                                 {offlineStats && offlineProcessing && (
-                                    <p className="text-[10px] text-slate-400 capitalize">{offlineStats.status} · {Math.round(offlineStats.progress || 0)}%</p>
+                                    <p className="text-[10px] text-slate-400 capitalize">
+                                        {offlineStats.status === "converting format"
+                                            ? "Finalizing video"
+                                            : offlineStats.status} · {Number(offlineStats.progress || 0).toFixed(1)}%
+                                    </p>
                                 )}
                                 {offlineOutputUrl && !offlineProcessing && (
-                                    <p className="text-[10px] text-emerald-400 flex items-center gap-1"><CheckCircle size={12} /> Analysis complete — play result on the left</p>
+                                    <div className="rounded-xl overflow-hidden border border-slate-700 bg-black">
+                                        <video
+                                            key={`sidebar-${offlineOutputUrl}`}
+                                            src={offlineOutputUrl}
+                                            controls
+                                            playsInline
+                                            preload="metadata"
+                                            className="w-full max-h-44 object-contain bg-black"
+                                            onError={() => setOfflineVideoError("Could not play the processed video in the panel.")}
+                                        />
+                                    </div>
+                                )}
+                                {offlineResults && !offlineProcessing && (
+                                    <div className="space-y-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                                            <CheckCircle size={12} /> Analysis Results
+                                        </p>
+                                        <div className="space-y-1.5 text-xs text-slate-300">
+                                            <p><span className="text-slate-500">Frames:</span> {offlineResults.processedFrames}</p>
+                                            <p><span className="text-slate-500">Weapons:</span> {offlineResults.weaponTotal > 0 ? `${offlineResults.weapons} (analyzed frames)` : "None detected"}</p>
+                                            <p><span className="text-slate-500">Faces:</span> {offlineResults.faceTotal > 0 ? `${offlineResults.faces} (analyzed frames)` : "None detected"}</p>
+                                            <p><span className="text-slate-500">Fight:</span> {offlineResults.fight ? `Yes (${Math.round(offlineResults.fightConf * 100)}% max, ${offlineResults.fightFrames} analyzed frames)` : "None detected"}</p>
+                                            <p><span className="text-slate-500">Dress code:</span> {offlineResults.dresscodeTotal > 0 ? `${offlineResults.dresscode} (analyzed frames)` : "None detected"}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {offlineVideoError && !offlineProcessing && (
+                                    <p className="text-[10px] text-red-400">{offlineVideoError}</p>
+                                )}
+                                {offlineOutputUrl && !offlineProcessing && offlineOutputPathRef.current && (
+                                    <a
+                                        href={aiProcessedVideoUrl(offlineOutputPathRef.current, { withToken: true })}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[10px] text-blue-400 underline block"
+                                    >
+                                        Open processed video in new tab
+                                    </a>
                                 )}
                             </div>
                         )}
@@ -883,7 +1239,7 @@ export default function LiveRecognitionPanel({ onClose, cameras = [] }) {
                     )}
                 </div>
 
-                <div className="space-y-4 mt-8">
+                <div className="shrink-0 px-8 pb-8 pt-4 border-t border-white/5 space-y-4">
                     {sourceType !== 'pipeline' && sourceType !== 'offline' && (
                         !isSyncing ? (
                             <button

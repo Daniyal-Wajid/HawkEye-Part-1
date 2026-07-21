@@ -104,7 +104,7 @@ export default function Cameras() {
         </div>
 
         {showLivePanel && (
-          <div className="h-[600px] animate-in zoom-in-95 duration-300">
+          <div className="h-[680px] animate-in zoom-in-95 duration-300">
             <LiveRecognitionPanel cameras={cameras} onClose={() => setShowLivePanel(false)} />
           </div>
         )}

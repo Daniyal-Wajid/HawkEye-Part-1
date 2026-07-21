@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Topbar from "../../components/Topbar";
 import StudentsFilters from "../../components/StudentsFilters";
 import StudentsGrid from "../../components/StudentsGrid";
@@ -6,7 +6,7 @@ import StudentRegistrationModal from "../../components/StudentRegistrationModal"
 import ViewStudentModal from "../../components/ViewStudentModal";
 import EditStudentModal from "../../components/EditStudentModal";
 import { UserPlus } from "lucide-react";
-import { apiGet } from "../../lib/api";
+import { apiGet, apiDelete } from "../../lib/api";
 
 export default function Students() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -15,6 +15,8 @@ export default function Students() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
 
   const fetchStudents = useCallback(async () => {
     setLoading(true);
@@ -31,6 +33,58 @@ export default function Students() {
 
   useEffect(() => {
     fetchStudents();
+  }, [fetchStudents]);
+
+  const departments = useMemo(() => {
+    const set = new Set();
+    for (const s of students) {
+      const dept = String(s.department || "").trim();
+      if (dept) set.add(dept);
+    }
+    return Array.from(set).sort();
+  }, [students]);
+
+  const filteredStudents = useMemo(() => {
+    return students.filter((s) => {
+      const name = String(s.name || "").toLowerCase();
+      const roll = String(s.rollNumber || s.roll_number || "").toLowerCase();
+      const email = String(s.email || "").toLowerCase();
+      const dept = String(s.department || "").trim().toLowerCase();
+
+      const matchesSearch =
+        name.includes(search.toLowerCase()) ||
+        roll.includes(search.toLowerCase()) ||
+        email.includes(search.toLowerCase());
+
+      const matchesDept =
+        departmentFilter === "all" || dept === departmentFilter.toLowerCase();
+
+      return matchesSearch && matchesDept;
+    });
+  }, [students, search, departmentFilter]);
+
+  const handleDeleteStudent = useCallback(async (student) => {
+    const id = student._id || student.id;
+    const label = student.name || student.rollNumber || id;
+    if (
+      !window.confirm(
+        `Delete student "${label}"? This removes their login account, violations, fines, rewards, and face enrollment. This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await apiDelete(`/api/students/${id}`);
+      setViewStudent((current) =>
+        current && (current._id || current.id) === id ? null : current,
+      );
+      setEditingStudent((current) =>
+        current && (current._id || current.id) === id ? null : current,
+      );
+      await fetchStudents();
+    } catch (err) {
+      window.alert(err.message || "Failed to delete student");
+    }
   }, [fetchStudents]);
 
   return (
@@ -54,13 +108,20 @@ export default function Students() {
           </button>
         </div>
 
-        <StudentsFilters />
+        <StudentsFilters
+          search={search}
+          setSearch={setSearch}
+          departmentFilter={departmentFilter}
+          setDepartmentFilter={setDepartmentFilter}
+          departments={departments}
+        />
         <StudentsGrid
-          students={students}
+          students={filteredStudents}
           loading={loading}
           error={error}
           onViewDetails={setViewStudent}
           onEdit={(s) => { setViewStudent(null); setEditingStudent(s); }}
+          onDelete={handleDeleteStudent}
         />
       </div>
 
@@ -75,6 +136,7 @@ export default function Students() {
           student={viewStudent}
           onClose={() => setViewStudent(null)}
           onEdit={(s) => { setViewStudent(null); setEditingStudent(s); }}
+          onDelete={handleDeleteStudent}
         />
       )}
 

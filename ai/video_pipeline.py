@@ -1,4 +1,8 @@
 import os
+import json
+import re
+import shutil
+import subprocess
 import threading
 import time
 import queue
@@ -32,6 +36,102 @@ except Exception:
 def _is_stream_source(source: str) -> bool:
     src = str(source).lower()
     return src.startswith("rtsp://") or src.startswith("http://") or src.startswith("https://")
+
+
+def _resolve_ffmpeg_exe() -> Optional[str]:
+    """Find a usable ffmpeg binary (system, bundled, or imageio-ffmpeg)."""
+    env_path = os.environ.get("FFMPEG_PATH") or os.environ.get("FFMPEG_BINARY")
+    if env_path and Path(env_path).exists():
+        return env_path
+
+    which = shutil.which("ffmpeg")
+    if which:
+        return which
+
+    bundled = BASE_DIR.parent / "backend" / "node_modules" / "ffmpeg-static" / "ffmpeg"
+    if bundled.exists():
+        return str(bundled)
+
+    try:
+        import imageio_ffmpeg
+
+        exe = imageio_ffmpeg.get_ffmpeg_exe()
+        if exe and Path(exe).exists():
+            return exe
+    except Exception:
+        pass
+
+    return None
+
+
+def _normalize_fps(fps: float) -> float:
+    if fps <= 0 or fps > 120:
+        return 30.0
+    return float(fps)
+
+
+def _probe_video_duration(source_path: str) -> Optional[float]:
+    """Read real media duration via ffmpeg (OpenCV fps/duration is wrong for many WebM files)."""
+    ffmpeg = _resolve_ffmpeg_exe()
+    if not ffmpeg:
+        return None
+
+    result = subprocess.run(
+        [ffmpeg, "-hide_banner", "-i", source_path, "-f", "null", "-"],
+        capture_output=True,
+        text=True,
+    )
+    match = re.search(
+        r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)",
+        result.stderr or "",
+    )
+    if not match:
+        return None
+
+    hours, minutes, seconds = match.groups()
+    return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
+
+def _convert_video_to_h264(
+    source_path: str,
+    output_path: str,
+    target_fps: Optional[float] = None,
+) -> None:
+    """Re-encode OpenCV mp4v output to browser-playable H.264 MP4."""
+    ffmpeg = _resolve_ffmpeg_exe()
+    if not ffmpeg:
+        raise RuntimeError(
+            "ffmpeg not found. Install ffmpeg, set FFMPEG_PATH, or run "
+            "'npm install' in webApp/backend (ffmpeg-static)."
+        )
+
+    mp4_path = str(Path(output_path).with_suffix(".mp4"))
+
+    cmd = [
+        ffmpeg,
+        "-y",
+        "-i",
+        source_path,
+    ]
+    if target_fps and target_fps > 0:
+        cmd += ["-r", f"{target_fps:.3f}"]
+    cmd += [
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-an",
+        "-f",
+        "mp4",
+        mp4_path,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        err = (result.stderr or result.stdout or "").strip()
+        tail = err.splitlines()[-8:] if err else ["unknown ffmpeg error"]
+        raise RuntimeError("ffmpeg conversion failed: " + " | ".join(tail))
 
 
 def report_violation(
@@ -100,6 +200,17 @@ class PipelineStats:
     model_name: str = ""
     device: str = "cpu"
     last_update_ts: float = 0.0
+    offline_weapon_summary: str = ""
+    offline_weapon_total: int = 0
+    offline_faces_summary: str = ""
+    offline_face_total: int = 0
+    offline_fight_detected: bool = False
+    offline_fight_max_conf: float = 0.0
+    offline_fight_frames: int = 0
+    offline_dresscode_summary: str = ""
+    offline_dresscode_total: int = 0
+    offline_output_file: str = ""
+    offline_mobile_findings: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -249,6 +360,8 @@ class DetectorPipeline:
         self._load_dresscode_model()
 
         self._last_violation: Dict[tuple, float] = {}
+        self._violation_cooldown_sec = float(VIOLATION_COOLDOWN_SEC)
+        self._cooldown_fetched_at = 0.0
         self.pipeline_location = "Camera Feed"
         self.pipeline_camera_id = None
         self.pipeline_camera_name = None
@@ -261,6 +374,26 @@ class DetectorPipeline:
         if camera_name is not None:
             self.pipeline_camera_name = camera_name
 
+    def _get_violation_cooldown_sec(self) -> float:
+        now = time.time()
+        if self._cooldown_fetched_at and now - self._cooldown_fetched_at < 60:
+            return self._violation_cooldown_sec
+        try:
+            response = requests.get(
+                f"{BACKEND_URL}/api/internal/violation-cooldown",
+                headers={"X-AI-Secret-Key": AI_SECRET_KEY},
+                timeout=3,
+            )
+            if response.ok:
+                payload = response.json()
+                seconds = float(payload.get("seconds", VIOLATION_COOLDOWN_SEC))
+                if seconds > 0:
+                    self._violation_cooldown_sec = seconds
+                    self._cooldown_fetched_at = now
+        except Exception as e:
+            print(f"[AI] Cooldown fetch failed, using default: {e}")
+        return self._violation_cooldown_sec
+
     def _maybe_report_violation(
         self,
         violation_type: str,
@@ -270,7 +403,8 @@ class DetectorPipeline:
     ) -> None:
         key = (str(violation_type).lower(), student_id or "__unknown__")
         now = time.time()
-        if key in self._last_violation and now - self._last_violation[key] < VIOLATION_COOLDOWN_SEC:
+        cooldown_sec = self._get_violation_cooldown_sec()
+        if key in self._last_violation and now - self._last_violation[key] < cooldown_sec:
             return
         self._last_violation[key] = now
         report_violation(
@@ -325,6 +459,7 @@ class DetectorPipeline:
         face_results = [
             {
                 "student_id": f["student_id"],
+                "name": f.get("display_name") or f.get("name"),
                 "confidence": float(f["confidence"]),
                 "bbox": [int(v) for v in f["bbox"]],
                 "recognized": bool(f["recognized"]),
@@ -448,6 +583,7 @@ class DetectorPipeline:
             results.append({
                 "student_id": student_id,
                 "name": name,
+                "display_name": name,
                 "confidence": conf_face,
                 "bbox": [x1, y1, x2 - x1, y2 - y1],
                 "recognized": recognized,
@@ -953,185 +1089,477 @@ class DetectorPipeline:
             self.stats.status = "stopped"
             self.stats.last_update_ts = time.time()
 
+    def _set_offline_progress(self, frame_idx: int, total_frames: int) -> None:
+        """Update shared stats for offline jobs (safe to call before heavy inference)."""
+        with self.lock:
+            self.stats.processed_frames = frame_idx
+            if total_frames > 0:
+                progress = (frame_idx / total_frames) * 100.0
+                self.stats.progress = progress
+                elapsed = time.time() - self.stats.start_time
+                fps = frame_idx / elapsed if elapsed > 0 else 0.0
+                remaining = max(0, total_frames - frame_idx)
+                self.stats.eta_seconds = remaining / fps if fps > 0 else 0.0
+                self.stats.status = f"processing {progress:.1f}%"
+            else:
+                self.stats.progress = float(frame_idx)
+                self.stats.status = f"processing frame {frame_idx}"
+
     def process_file_offline(self, source_path: str, output_path: str) -> bool:
+        output_path = str(Path(output_path).with_suffix(".mp4"))
         cap = cv2.VideoCapture(source_path)
         if not cap.isOpened():
             print(f"[ERROR] Cannot open {source_path}")
+            with self.lock:
+                self.stats.status = "error: cannot open video"
             return False
 
-        orig_fps = cap.get(cv2.CAP_PROP_FPS)
-        if orig_fps <= 0: orig_fps = 30.0
+        orig_fps = _normalize_fps(cap.get(cv2.CAP_PROP_FPS))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        source_duration = _probe_video_duration(source_path)
+        if source_duration and source_duration > 0:
+            estimated_frames = max(total_frames, int(source_duration * orig_fps))
+            total_frames = max(total_frames, estimated_frames)
 
         if self.process_width and width > self.process_width:
             scale = self.process_width / width
             width = self.process_width
             height = int(height * scale)
 
+        writer_fps = orig_fps / self.frame_skip
+        if source_duration and source_duration > 0:
+            # Placeholder fps for temp file; final timing is corrected in ffmpeg pass.
+            writer_fps = max(5.0, min(60.0, orig_fps / self.frame_skip))
+
         temp_output_path = output_path + ".temp.mp4"
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(temp_output_path, fourcc, orig_fps / self.frame_skip, (width, height))
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(
+            temp_output_path, fourcc, writer_fps, (width, height)
+        )
+        if not out.isOpened():
+            cap.release()
+            print(f"[ERROR] Cannot create video writer: {temp_output_path}")
+            with self.lock:
+                self.stats.status = "error: cannot create output video"
+            return False
 
         frame_idx = 0
+        written_frames = 0
         cached_boxes = []
         cached_faces = []
         cached_dresscode = []
         fight_cache = (False, 0.0)
         fight_frame_buffer = deque(maxlen=self._fight_seq_len if self._fight_seq_model else 1)
+        weapon_counts: Dict[str, int] = {}
+        face_counts: Dict[str, int] = {}
+        dresscode_counts: Dict[str, int] = {}
+        fight_frames = 0
+        fight_max_conf = 0.0
+        output_name = Path(output_path).name
 
-        print(f"[INFO] Starting offline processing: {source_path} -> {output_path} ({total_frames} frames)")
-        
+        print(
+            f"[INFO] Starting offline processing: {source_path} -> {output_path} ({total_frames} frames)"
+        )
+
         with self.lock:
             self.stats.status = "processing_offline"
             self.stats.processed_frames = 0
             self.stats.progress = 0.0
             self.stats.start_time = time.time()
             self.stats.eta_seconds = 0.0
-            
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-                
-            frame_idx += 1
-            if frame_idx % self.frame_skip != 0:
-                continue
+            self.stats.offline_weapon_summary = ""
+            self.stats.offline_weapon_total = 0
+            self.stats.offline_faces_summary = ""
+            self.stats.offline_face_total = 0
+            self.stats.offline_fight_detected = False
+            self.stats.offline_fight_max_conf = 0.0
+            self.stats.offline_fight_frames = 0
+            self.stats.offline_dresscode_summary = ""
+            self.stats.offline_dresscode_total = 0
+            self.stats.offline_output_file = output_name
 
-            if self.process_width and frame.shape[1] > self.process_width:
-                frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
+        try:
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
 
-            fight_frame_buffer.append(frame.copy())
+                frame_idx += 1
+                if frame_idx % self.frame_skip != 0:
+                    continue
 
-            # YOLO Det
-            if frame_idx % self.object_stride == 0:
-                results = self.model.predict(source=frame, conf=self.conf_threshold, iou=self.iou_threshold, verbose=False, device=self.device, imgsz=self.yolo_imgsz)
-                cached_boxes = []
-                for result in results:
-                    if result.boxes is None: continue
-                    for box in result.boxes:
-                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
-                        conf = float(box.conf[0])
-                        cls_id = int(box.cls[0])
-                        label = self.model.names.get(cls_id, str(cls_id))
-                        cached_boxes.append((x1, y1, x2, y2, label, conf))
+                self._set_offline_progress(frame_idx, total_frames)
 
-            # Faces
-            if frame_idx % self.face_stride == 0 and face_recognition is not None:
-                cached_faces = []
-                for f in self._recognize_faces_in_frame(frame, face_scale=0.75):
-                    x1, y1, x2, y2 = f["face_box_raw"]
-                    cached_faces.append((x1, y1, x2, y2, f["display_name"], f["confidence"], f["student_id"]))
+                if self.process_width and frame.shape[1] > self.process_width:
+                    frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_AREA)
 
-            # Fight
-            if frame_idx % self.fight_stride == 0:
-                try:
-                    if self._fight_seq_model: fight_cache = self._predict_fight_sequence(list(fight_frame_buffer))
-                    else: fight_cache = self._predict_fight_single(frame)
-                except Exception: fight_cache = (False, 0.0)
+                fight_frame_buffer.append(frame.copy())
 
-            # Dresscode
-            if frame_idx % self.dresscode_stride == 0:
-                try:
-                    cached_dresscode = self._predict_dresscode(frame)
-                except Exception:
-                    cached_dresscode = []
+                # YOLO Det
+                if frame_idx % self.object_stride == 0:
+                    results = self.model.predict(source=frame, conf=self.conf_threshold, iou=self.iou_threshold, verbose=False, device=self.device, imgsz=self.yolo_imgsz)
+                    cached_boxes = []
+                    for result in results:
+                        if result.boxes is None:
+                            continue
+                        for box in result.boxes:
+                            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
+                            conf = float(box.conf[0])
+                            cls_id = int(box.cls[0])
+                            label = self.model.names.get(cls_id, str(cls_id))
+                            cached_boxes.append((x1, y1, x2, y2, label, conf))
 
-            # Annotate
-            annotated = frame.copy()
-            for x1, y1, x2, y2, label, conf in cached_boxes:
-                cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 200, 0), 2)
-                if self.show_labels:
-                    cv2.putText(annotated, f"{label} {conf:.2f}", (x1, max(16, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 0), 2, cv2.LINE_AA)
-            
-            for x1, y1, x2, y2, name, conf_face, _sid in cached_faces:
-                color = (0, 255, 255) if name == "Unknown" else (255, 180, 0)
-                cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-                cv2.putText(annotated, f"{name} {conf_face:.2f}", (x1, max(16, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2, cv2.LINE_AA)
-            
-            violation_count = 0
-            violation_labels = set()
-            for x1, y1, x2, y2, label, conf in cached_dresscode:
-                is_violation = label.lower() != "allowed"
-                color = (255, 0, 255) if is_violation else (0, 200, 0)
-                if is_violation:
-                    violation_count += 1
-                    violation_labels.add(label)
-                cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-                if self.show_labels:
-                    cv2.putText(annotated, f"DC: {label} {conf:.2f}", (x1, max(16, y1 - 8)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2, cv2.LINE_AA)
+                # Faces
+                if frame_idx % self.face_stride == 0 and face_recognition is not None:
+                    cached_faces = []
+                    for f in self._recognize_faces_in_frame(frame, face_scale=0.75):
+                        x1, y1, x2, y2 = f["face_box_raw"]
+                        cached_faces.append((x1, y1, x2, y2, f["display_name"], f["confidence"], f["student_id"]))
 
-            is_fight, fight_conf = fight_cache
-            h, w = annotated.shape[:2]
-            banner_y = h
-            banner_h = 36
-            
-            if violation_count > 0:
-                banner_y -= banner_h
-                cv2.rectangle(annotated, (0, banner_y), (w, banner_y + banner_h), (180, 0, 180), -1)
-                cv2.putText(annotated, f"DRESS CODE VIOLATION: {', '.join(sorted(violation_labels))}", (10, banner_y + banner_h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
-            
-            if is_fight:
-                banner_y -= banner_h
-                cv2.rectangle(annotated, (0, banner_y), (w, banner_y + banner_h), (0, 0, 180), -1)
-                cv2.putText(annotated, f"FIGHT DETECTED ({fight_conf:.2f})", (10, banner_y + banner_h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2, cv2.LINE_AA)
+                # Fight
+                if frame_idx % self.fight_stride == 0:
+                    try:
+                        if self._fight_seq_model:
+                            fight_cache = self._predict_fight_sequence(list(fight_frame_buffer))
+                        else:
+                            fight_cache = self._predict_fight_single(frame)
+                    except Exception:
+                        fight_cache = (False, 0.0)
 
-            # Draw progress
-            percent = int((frame_idx / total_frames) * 100) if total_frames > 0 else 0
-            elapsed = time.time() - self.stats.start_time
-            fps = frame_idx / elapsed if elapsed > 0 else 0
-            eta = int((total_frames - frame_idx) / fps) if fps > 0 else 0
+                # Dresscode
+                if frame_idx % self.dresscode_stride == 0:
+                    try:
+                        cached_dresscode = self._predict_dresscode(frame)
+                    except Exception:
+                        cached_dresscode = []
 
-            progress_text = f"{percent}% | ETA: {eta}s"
-            cv2.putText(annotated, progress_text, (12, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.62, (0, 255, 255), 2, cv2.LINE_AA)
+                # Count detections only when each model runs — cached results persist
+                # between strides and must not be counted again on every output frame.
+                if frame_idx % self.object_stride == 0:
+                    for _x1, _y1, _x2, _y2, label, _conf in cached_boxes:
+                        key = str(label).lower()
+                        weapon_counts[key] = weapon_counts.get(key, 0) + 1
 
-            # Progress bar
-            bar_width = int((frame_idx / total_frames) * w) if total_frames > 0 else 0
-            cv2.rectangle(annotated, (0, h - 10), (bar_width, h), (0, 255, 0), -1)
+                if frame_idx % self.face_stride == 0:
+                    for _x1, _y1, _x2, _y2, name, _conf_face, _sid in cached_faces:
+                        face_counts[str(name)] = face_counts.get(str(name), 0) + 1
 
-            out.write(annotated)
-            
+                if frame_idx % self.fight_stride == 0:
+                    is_fight, fight_conf = fight_cache
+                    if is_fight:
+                        fight_frames += 1
+                        fight_max_conf = max(fight_max_conf, float(fight_conf))
+
+                if frame_idx % self.dresscode_stride == 0:
+                    for _x1, _y1, _x2, _y2, label, _conf in cached_dresscode:
+                        if str(label).lower() != "allowed":
+                            key = str(label).lower()
+                            dresscode_counts[key] = dresscode_counts.get(key, 0) + 1
+
+                # Draw detection boxes only (no alert banners or progress overlay)
+                annotated = frame.copy()
+                for x1, y1, x2, y2, label, conf in cached_boxes:
+                    cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 200, 0), 2)
+                    if self.show_labels:
+                        cv2.putText(
+                            annotated,
+                            f"{label} {conf:.2f}",
+                            (x1, max(16, y1 - 8)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5,
+                            (0, 200, 0),
+                            2,
+                            cv2.LINE_AA,
+                        )
+
+                for x1, y1, x2, y2, name, conf_face, _sid in cached_faces:
+                    color = (0, 255, 255) if name == "Unknown" else (255, 180, 0)
+                    cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+                    cv2.putText(
+                        annotated,
+                        f"{name} {conf_face:.2f}",
+                        (x1, max(16, y1 - 8)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        color,
+                        2,
+                        cv2.LINE_AA,
+                    )
+
+                for x1, y1, x2, y2, label, conf in cached_dresscode:
+                    is_violation = str(label).lower() != "allowed"
+                    color = (255, 0, 255) if is_violation else (0, 200, 0)
+                    cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
+                    if self.show_labels:
+                        cv2.putText(
+                            annotated,
+                            f"DC: {label} {conf:.2f}",
+                            (x1, max(16, y1 - 8)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.5,
+                            color,
+                            2,
+                            cv2.LINE_AA,
+                        )
+
+                out.write(annotated)
+                written_frames += 1
+                self._set_offline_progress(frame_idx, total_frames)
+
+        except Exception as e:
+            print(f"[ERROR] Offline processing failed: {e}")
+            import traceback
+
+            traceback.print_exc()
             with self.lock:
-                self.stats.processed_frames = frame_idx
+                self.stats.status = f"error: {e}"
+                self.stats.last_update_ts = time.time()
+            return False
+        finally:
+            cap.release()
+            out.release()
 
-                if total_frames > 0:
-                    progress = frame_idx / total_frames
-                    self.stats.progress = progress * 100
-
-                    elapsed = time.time() - self.stats.start_time
-                    fps = frame_idx / elapsed if elapsed > 0 else 0
-
-                    remaining_frames = total_frames - frame_idx
-                    eta = remaining_frames / fps if fps > 0 else 0
-
-                    self.stats.eta_seconds = eta
-                    self.stats.status = f"processing {int(progress * 100)}%"
-
-        cap.release()
-        out.release()
-        
         print(f"[INFO] Converting video to browser-compatible format using ffmpeg...")
         with self.lock:
             self.stats.status = "converting format"
-            
-        import subprocess
-        import os
+
+        if source_duration and source_duration > 0 and written_frames > 0:
+            target_fps = written_frames / source_duration
+            target_fps = max(5.0, min(60.0, target_fps))
+        else:
+            target_fps = max(5.0, min(60.0, orig_fps / self.frame_skip))
+
+        print(
+            f"[INFO] Offline export timing: {written_frames} frames, "
+            f"source={source_duration:.2f}s, output_fps={target_fps:.2f}"
+            if source_duration
+            else f"[INFO] Offline export timing: {written_frames} frames, output_fps={target_fps:.2f}"
+        )
+
         try:
-            subprocess.run([
-                "ffmpeg", "-y", "-i", temp_output_path,
-                "-vcodec", "libx264", "-acodec", "aac",
-                output_path
-            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _convert_video_to_h264(temp_output_path, output_path, target_fps=target_fps)
             if os.path.exists(temp_output_path):
                 os.remove(temp_output_path)
         except Exception as e:
             print(f"[ERROR] ffmpeg conversion failed: {e}")
-            import shutil
-            shutil.move(temp_output_path, output_path)
+            if os.path.exists(temp_output_path):
+                try:
+                    os.remove(temp_output_path)
+                except OSError:
+                    pass
+            with self.lock:
+                self.stats.status = f"error: {e}"
+                self.stats.last_update_ts = time.time()
+            return False
+
+        def _fmt_counts(counts: Dict[str, int]) -> str:
+            if not counts:
+                return ""
+            return ", ".join(f"{k} ({v})" for k, v in sorted(counts.items(), key=lambda x: (-x[1], x[0])))
+
+        weapon_total = sum(weapon_counts.values())
+        face_total = sum(face_counts.values())
+        dresscode_total = sum(dresscode_counts.values())
 
         print(f"[INFO] Offline processing finished: {output_path}")
         with self.lock:
-            self.stats.status = "stopped"
+            self.stats.progress = 100.0
+            self.stats.status = "offline_complete"
             self.stats.last_update_ts = time.time()
+            self.stats.offline_weapon_summary = _fmt_counts(weapon_counts)
+            self.stats.offline_weapon_total = weapon_total
+            self.stats.offline_faces_summary = _fmt_counts(face_counts)
+            self.stats.offline_face_total = face_total
+            self.stats.offline_fight_detected = fight_frames > 0
+            self.stats.offline_fight_max_conf = fight_max_conf
+            self.stats.offline_fight_frames = fight_frames
+            self.stats.offline_dresscode_summary = _fmt_counts(dresscode_counts)
+            self.stats.offline_dresscode_total = dresscode_total
+            self.stats.offline_output_file = output_name
+        return True
+
+    def _upsert_mobile_finding(
+        self,
+        findings: Dict[tuple, Dict[str, Any]],
+        violation_type: str,
+        student_id=None,
+        student_name=None,
+        confidence: float = 0.0,
+        source: str = "unknown",
+    ) -> None:
+        vt = str(violation_type or "unknown").lower().strip()
+        sid = str(student_id) if student_id else None
+        key = (vt, sid or "__unknown__")
+        payload = {
+            "violation_type": vt,
+            "student_id": sid,
+            "student_name": student_name,
+            "confidence": float(confidence or 0.0),
+            "source": source,
+        }
+        existing = findings.get(key)
+        if not existing or payload["confidence"] > existing["confidence"]:
+            findings[key] = payload
+
+    def _ingest_analyze_frame_for_mobile(
+        self,
+        frame_result: Dict[str, Any],
+        findings: Dict[tuple, Dict[str, Any]],
+    ) -> None:
+        face_name_by_id = {
+            str(r.get("student_id")): r.get("name") or r.get("display_name")
+            for r in frame_result.get("results", [])
+            if r.get("student_id")
+        }
+
+        for wd in frame_result.get("weapon_detections", []):
+            weapon = str(wd.get("weapon") or "weapon").lower()
+            sid = wd.get("student_id")
+            name = None
+            if sid:
+                name = face_name_by_id.get(str(sid))
+            elif wd.get("person_label"):
+                name = wd.get("person_label")
+            self._upsert_mobile_finding(
+                findings,
+                weapon,
+                sid,
+                name,
+                wd.get("confidence", 0.0),
+                "weapon",
+            )
+
+        fight = frame_result.get("fight_detection")
+        if fight and fight.get("detected"):
+            fight_conf = float(fight.get("confidence") or 0.0)
+            recognized = [
+                r for r in frame_result.get("results", [])
+                if r.get("recognized") and r.get("student_id")
+            ]
+            if recognized:
+                best_face = max(recognized, key=lambda r: float(r.get("confidence") or 0.0))
+                self._upsert_mobile_finding(
+                    findings,
+                    "fight",
+                    best_face.get("student_id"),
+                    best_face.get("name"),
+                    fight_conf,
+                    "fight",
+                )
+            else:
+                self._upsert_mobile_finding(
+                    findings,
+                    "fight",
+                    None,
+                    None,
+                    fight_conf,
+                    "fight",
+                )
+
+        recognized_faces = [
+            r for r in frame_result.get("results", [])
+            if r.get("recognized") and r.get("student_id")
+        ]
+        for dc in frame_result.get("dresscode_violations", []):
+            dc_type = str(dc.get("type") or "dresscode").lower()
+            dc_conf = float(dc.get("confidence") or 0.0)
+            if recognized_faces:
+                best_face = max(recognized_faces, key=lambda r: float(r.get("confidence") or 0.0))
+                self._upsert_mobile_finding(
+                    findings,
+                    dc_type,
+                    best_face.get("student_id"),
+                    best_face.get("name"),
+                    dc_conf,
+                    "dresscode",
+                )
+            else:
+                self._upsert_mobile_finding(
+                    findings,
+                    dc_type,
+                    None,
+                    None,
+                    dc_conf,
+                    "dresscode",
+                )
+
+    def process_mobile_report(self, source_path: str) -> bool:
+        """Analyze a mobile report clip/photo and collect structured violation findings."""
+        path = Path(source_path)
+        if not path.exists():
+            with self.lock:
+                self.stats.status = "error: file not found"
+            return False
+
+        findings: Dict[tuple, Dict[str, Any]] = {}
+        image_exts = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+
+        with self.lock:
+            self.stats.status = "processing_mobile_report"
+            self.stats.progress = 0.0
+            self.stats.start_time = time.time()
+            self.stats.offline_mobile_findings = ""
+            self.stats.offline_output_file = ""
+
+        try:
+            if path.suffix.lower() in image_exts:
+                frame = cv2.imread(str(path))
+                if frame is None:
+                    raise RuntimeError("cannot read image")
+                if self.process_width and frame.shape[1] > self.process_width:
+                    scale = self.process_width / frame.shape[1]
+                    frame = cv2.resize(
+                        frame,
+                        (self.process_width, int(frame.shape[0] * scale)),
+                        interpolation=cv2.INTER_AREA,
+                    )
+                self._ingest_analyze_frame_for_mobile(self.analyze_frame(frame), findings)
+                with self.lock:
+                    self.stats.progress = 100.0
+            else:
+                cap = cv2.VideoCapture(str(path))
+                if not cap.isOpened():
+                    raise RuntimeError("cannot open video")
+                total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0))
+                frame_idx = 0
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    frame_idx += 1
+                    if frame_idx % self.frame_skip != 0:
+                        continue
+                    if self.process_width and frame.shape[1] > self.process_width:
+                        scale = self.process_width / frame.shape[1]
+                        frame = cv2.resize(
+                            frame,
+                            (self.process_width, int(frame.shape[0] * scale)),
+                            interpolation=cv2.INTER_AREA,
+                        )
+                    self._ingest_analyze_frame_for_mobile(self.analyze_frame(frame), findings)
+                    with self.lock:
+                        self.stats.progress = min(
+                            99.0,
+                            (frame_idx / total_frames) * 100.0,
+                        )
+                cap.release()
+        except Exception as e:
+            print(f"[ERROR] Mobile report analysis failed: {e}")
+            import traceback
+
+            traceback.print_exc()
+            with self.lock:
+                self.stats.status = f"error: {e}"
+                self.stats.last_update_ts = time.time()
+            return False
+
+        findings_list = list(findings.values())
+        print(f"[INFO] Mobile report analysis finished: {len(findings_list)} finding(s)")
+        with self.lock:
+            self.stats.progress = 100.0
+            self.stats.status = "offline_complete"
+            self.stats.last_update_ts = time.time()
+            self.stats.offline_mobile_findings = json.dumps(findings_list)
         return True

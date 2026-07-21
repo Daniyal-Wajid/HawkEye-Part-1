@@ -18,7 +18,8 @@ export default function PolicyRules() {
           <div>
             <h1 className="text-2xl font-bold">Policy Rules</h1>
             <p className="text-slate-500">
-              Manage violation policies and penalties
+              Fines are matched to AI detection keys (gun, knife, fight, above_the_knee, …).
+              Editing a penalty updates all pending fines for that rule.
             </p>
           </div>
 

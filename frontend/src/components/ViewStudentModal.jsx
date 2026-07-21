@@ -1,6 +1,6 @@
-import { X, User, Mail, Hash, Building2, Calendar } from "lucide-react";
+import { X, User, Mail, Hash, Building2, Calendar, Trash2 } from "lucide-react";
 
-export default function ViewStudentModal({ student, onClose, onEdit }) {
+export default function ViewStudentModal({ student, onClose, onEdit, onDelete }) {
   if (!student) return null;
 
   return (
@@ -66,11 +66,21 @@ export default function ViewStudentModal({ student, onClose, onEdit }) {
           )}
         </div>
 
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex justify-between gap-3">
+          {onDelete && (
+            <button
+              type="button"
+              onClick={() => onDelete(student)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 font-medium"
+            >
+              <Trash2 size={16} />
+              Delete Student
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border rounded-lg hover:bg-slate-50 font-medium"
+            className="px-4 py-2 border rounded-lg hover:bg-slate-50 font-medium ml-auto"
           >
             Close
           </button>

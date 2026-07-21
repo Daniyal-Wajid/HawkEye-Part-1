@@ -1,7 +1,7 @@
 import StudentCard from "./StudentCard";
 import { Loader2, AlertCircle } from "lucide-react";
 
-export default function StudentsGrid({ students = [], loading, error, onViewDetails, onEdit }) {
+export default function StudentsGrid({ students = [], loading, error, onViewDetails, onEdit, onDelete }) {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-4">
@@ -36,6 +36,7 @@ export default function StudentsGrid({ students = [], loading, error, onViewDeta
           student={student}
           onViewDetails={onViewDetails}
           onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>

@@ -88,6 +88,19 @@ export default function ManualViolationReviewModal({ row, canGiveRewards, onClos
             <span className="capitalize">{row.category}</span>
           </p>
           <p className="text-slate-700 whitespace-pre-wrap">{row.description}</p>
+          {(row.aiStatus || row.ai_status) && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                HawkEye AI
+              </p>
+              <p className="font-medium capitalize">
+                {(row.aiStatus || row.ai_status || "").replace(/_/g, " ")}
+              </p>
+              {(row.reviewNote || row.review_note) && (
+                <p className="text-slate-600 text-xs">{row.reviewNote || row.review_note}</p>
+              )}
+            </div>
+          )}
           {row.evidenceSignedUrl && (
             <a
               href={row.evidenceSignedUrl}

@@ -65,6 +65,18 @@ def save_db(db, path=FACE_DB_PATH):
     print(f"[INFO] Database saved to {path} ({len(db)} face(s))")
 
 
+def remove_student(student_id, path=FACE_DB_PATH):
+    """Remove a student from the face database by UUID."""
+    db = load_db(path)
+    sid = str(student_id)
+    if sid not in db:
+        return False
+    del db[sid]
+    save_db(db, path)
+    print(f"[Face DB] Removed student {sid}")
+    return True
+
+
 def upsert_student(db, student_id, embedding, name=None):
     """Store face enrollment keyed by UUID (student_id), not by name."""
     sid = str(student_id)

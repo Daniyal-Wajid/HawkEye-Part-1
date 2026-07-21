@@ -1,26 +1,17 @@
 import { useState, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
 import { apiPatch } from "../lib/api";
+import {
+  AI_VIOLATION_PRESETS,
+  canonicalViolationType,
+  presetForViolationKey,
+} from "../data/violationTypes";
 
 const SEVERITIES = ["LOW", "MED", "HIGH"];
 
-// Exact strings the YOLO AI model reports. Aliases are handled automatically server-side.
-const VIOLATION_TYPE_HINTS = [
-  { value: "gun",      label: "Gun (also matches: pistol, rifle, firearm, guns)" },
-  { value: "pistol",   label: "Pistol — alias of gun group" },
-  { value: "rifle",    label: "Rifle — alias of gun group" },
-  { value: "firearm",  label: "Firearm — alias of gun group" },
-  { value: "knife",    label: "Knife (also matches: blade, knives)" },
-  { value: "blade",    label: "Blade — alias of knife group" },
-  { value: "weapon",   label: "Weapon (generic — exact match only)" },
-  { value: "fighting", label: "Fighting" },
-  { value: "smoking",  label: "Smoking" },
-  { value: "uniform",  label: "Uniform Violation" },
-];
-
 export default function EditRuleModal({ rule, onClose, onSaved }) {
   const [title, setTitle] = useState("");
-  const [violationType, setViolationType] = useState("");
+  const [violationType, setViolationType] = useState(AI_VIOLATION_PRESETS[0].key);
   const [severity, setSeverity] = useState("MED");
   const [penalty, setPenalty] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -29,7 +20,8 @@ export default function EditRuleModal({ rule, onClose, onSaved }) {
   useEffect(() => {
     if (rule) {
       setTitle(rule.title ?? "");
-      setViolationType(rule.violation_type ?? "");
+      const canon = canonicalViolationType(rule.violation_type) || AI_VIOLATION_PRESETS[0].key;
+      setViolationType(canon);
       setSeverity(rule.severity ?? "MED");
       setPenalty(rule.penalty ?? 0);
       setError("");
@@ -44,6 +36,17 @@ export default function EditRuleModal({ rule, onClose, onSaved }) {
     return () => window.removeEventListener("keydown", handleEscape);
   }, [onClose]);
 
+  const handleViolationTypeChange = (nextKey) => {
+    setViolationType(nextKey);
+    const preset = presetForViolationKey(nextKey);
+    if (preset && !title.trim()) {
+      setTitle(preset.title);
+      setSeverity(preset.severity);
+    }
+  };
+
+  const selectedPreset = presetForViolationKey(violationType);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!rule) return;
@@ -52,7 +55,7 @@ export default function EditRuleModal({ rule, onClose, onSaved }) {
     try {
       await apiPatch(`/api/policy-rules/${rule._id || rule.id}`, {
         title,
-        violation_type: violationType.trim().toLowerCase() || null,
+        violation_type: violationType.trim().toLowerCase(),
         severity,
         penalty,
       });
@@ -86,6 +89,29 @@ export default function EditRuleModal({ rule, onClose, onSaved }) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Violation Type (AI key)
+            </label>
+            <select
+              value={violationType}
+              onChange={(e) => handleViolationTypeChange(e.target.value)}
+              required
+              className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {AI_VIOLATION_PRESETS.map((preset) => (
+                <option key={preset.key} value={preset.key}>
+                  {preset.key} — {preset.title}
+                </option>
+              ))}
+            </select>
+            {selectedPreset && (
+              <p className="mt-1 text-xs text-slate-400">
+                AI also matches: <span className="font-mono">{selectedPreset.aliases}</span>
+              </p>
+            )}
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
             <input
               type="text"
@@ -95,31 +121,6 @@ export default function EditRuleModal({ rule, onClose, onSaved }) {
               className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="e.g. Gun Detected"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Violation Type Key
-              <span className="ml-1 text-xs text-slate-400">(used for AI matching)</span>
-            </label>
-            <input
-              type="text"
-              value={violationType}
-              onChange={(e) => setViolationType(e.target.value)}
-              className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="e.g. gun, knife, fighting"
-              list="violation-type-hints"
-            />
-            <datalist id="violation-type-hints">
-              {VIOLATION_TYPE_HINTS.map((h) => (
-                <option key={h.value} value={h.value}>{h.label}</option>
-              ))}
-            </datalist>
-            <p className="mt-1 text-xs text-slate-400">
-              AI detects: <span className="font-mono">gun · pistol · rifle · knife · blade · weapon</span>.
-              Aliases are grouped automatically (gun = pistol = rifle). Leave blank to make this rule a
-              <strong className="text-slate-500"> catch-all</strong> that fires on any unmatched violation.
-            </p>
           </div>
 
           <div>
@@ -144,11 +145,13 @@ export default function EditRuleModal({ rule, onClose, onSaved }) {
               onChange={(e) => setPenalty(Number(e.target.value) || 0)}
               className="w-full border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+            <p className="mt-1 text-xs text-slate-400">
+              Changing this updates all <strong>Pending</strong> fines tied to this rule.
+              Paid or waived fines are not changed.
+            </p>
           </div>
 
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex gap-3 pt-2">
             <button

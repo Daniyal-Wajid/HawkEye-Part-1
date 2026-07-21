@@ -68,10 +68,40 @@ export function aiVideoFeedUrl() {
   return `${API_BASE}/api/ai/video-feed?token=${encodeURIComponent(token)}`;
 }
 
-export function aiProcessedVideoUrl(relativePath) {
+export function aiProcessedVideoUrl(relativePath, { withToken = false } = {}) {
+  const raw = String(relativePath || "");
+  const filename = raw.split("/").pop() || "";
+  const base = `${API_BASE}/api/ai/processed-video?file=${encodeURIComponent(filename)}`;
+  if (!withToken) return base;
   const token = authQueryToken();
-  const filename = relativePath.split("/").pop();
-  return `${API_BASE}/api/ai/processed/${filename}?token=${encodeURIComponent(token)}`;
+  return `${base}&token=${encodeURIComponent(token)}`;
+}
+
+/** Fetch processed video with Bearer auth and return a blob URL for the player. */
+export async function fetchProcessedVideoBlobUrl(relativePath) {
+  const raw = String(relativePath || "");
+  const filename = raw.split("/").pop() || "";
+  if (!filename) throw new Error("Missing processed video filename");
+
+  const res = await fetch(
+    `${API_BASE}/api/ai/processed-video?file=${encodeURIComponent(filename)}`,
+    { headers: authHeaders(null) },
+  );
+
+  if (!res.ok) {
+    let message = `Video load failed (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data.error) message = data.error;
+    } catch {
+      /* response may not be JSON */
+    }
+    throw new Error(message);
+  }
+
+  const blob = await res.blob();
+  if (!blob.size) throw new Error("Processed video file is empty");
+  return URL.createObjectURL(blob);
 }
 
 export async function aiUploadVideo(file) {

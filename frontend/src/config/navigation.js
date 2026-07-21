@@ -12,6 +12,8 @@ import {
     Gavel,
     Award,
     Flag,
+    MessageSquare,
+    Settings,
 } from "lucide-react";
 
 export const adminSidebarItems = [
@@ -23,6 +25,7 @@ export const adminSidebarItems = [
     { label: "Users", path: "/users", icon: UserCog },
     { label: "Cameras", path: "/cameras", icon: Camera },
     { label: "Policy Rules", path: "/policy-rules", icon: FileText },
+    { label: "System Settings", path: "/system-settings", icon: Settings },
     { label: "Notifications", path: "/notifications", icon: Bell },
     { label: "History Logs", path: "/history-logs", icon: History },
 ];
@@ -37,19 +40,11 @@ export const inchargeSidebarItems = [
     },
     { label: "Manual Violations", path: "/incharge/manual-violations", icon: Flag },
     { label: "Students", path: "/incharge/students", icon: Users },
-    {
-        label: "Review Queue",
-        path: "/incharge/reviews",
-        icon: ClipboardList,
-        badge: true // Badge indicator
-    },
-    {
-        label: "Notifications",
-        path: "/incharge/notifications",
-        icon: Bell,
-        badge: true
-    },
+    { label: "Review Queue", path: "/incharge/reviews", icon: ClipboardList },
+    { label: "Notifications", path: "/incharge/notifications", icon: Bell },
     { label: "Penalties & Challans", path: "/incharge/penalties", icon: Gavel },
+    { label: "Fine Appeals", path: "/incharge/appeals", icon: MessageSquare },
+    { label: "Violation Reports", path: "/incharge/reports", icon: BarChart2 },
     { label: "Rewards", path: "/incharge/rewards", icon: Award },
 ];
 export const studentSidebarItems = [

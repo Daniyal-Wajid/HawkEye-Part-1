@@ -23,6 +23,7 @@ from enroll import (
     FACE_DB_PATH,
     enroll_face_from_clip_file,
     load_db,
+    remove_student,
     save_db,
     train_from_frames_dir,
     upsert_student,
@@ -85,6 +86,16 @@ def train():
 
     pipeline._load_face_db()
     return jsonify({"status": "trained", "message": f"Successfully trained {student_id}"}), 200
+
+
+@app.route("/students/<student_id>", methods=["DELETE"])
+def delete_student(student_id):
+    removed = remove_student(student_id)
+    if pipeline:
+        pipeline._load_face_db()
+    if removed:
+        return jsonify({"status": "deleted", "studentId": str(student_id)}), 200
+    return jsonify({"status": "not_found", "studentId": str(student_id)}), 404
 
 
 @app.route("/recognize", methods=["POST"])
@@ -210,7 +221,16 @@ def process_offline_api():
         pipeline.stats.status = "initializing_offline"
 
     def run_process():
-        pipeline.process_file_offline(str(source_path), str(output_path))
+        try:
+            pipeline.process_file_offline(str(source_path), str(output_path))
+        except Exception as e:
+            print(f"[AI Server] Offline processing thread error: {e}")
+            import traceback
+
+            traceback.print_exc()
+            with pipeline.lock:
+                pipeline.stats.status = f"error: {e}"
+                pipeline.stats.last_update_ts = time.time()
 
     threading.Thread(target=run_process, daemon=True).start()
     return jsonify({
@@ -321,12 +341,21 @@ def upload_and_process():
     input_path = UPLOAD_DIR / filename
     uploaded.save(input_path)
 
-    output_filename = f"processed_{filename}"
+    output_filename = f"processed_{Path(filename).stem}.mp4"
     output_path = STATIC_DIR / output_filename
     pipeline.stop()
 
     def run_processing():
-        pipeline.process_file_offline(str(input_path), str(output_path))
+        try:
+            pipeline.process_file_offline(str(input_path), str(output_path))
+        except Exception as e:
+            print(f"[AI Server] Upload processing thread error: {e}")
+            import traceback
+
+            traceback.print_exc()
+            with pipeline.lock:
+                pipeline.stats.status = f"error: {e}"
+                pipeline.stats.last_update_ts = time.time()
 
     threading.Thread(target=run_processing, daemon=True).start()
     return jsonify({
@@ -334,6 +363,45 @@ def upload_and_process():
         "message": "Processing started",
         "output_url": f"/static/{output_filename}",
     })
+
+
+@app.post("/api/analyze_mobile_report")
+def analyze_mobile_report():
+    if pipeline is None:
+        return jsonify({"ok": False, "error": "Pipeline not initialized"}), 500
+
+    if "file" not in request.files:
+        return jsonify({"ok": False, "error": "No file uploaded"}), 400
+
+    uploaded = request.files["file"]
+    if not uploaded.filename:
+        return jsonify({"ok": False, "error": "Empty filename"}), 400
+
+    filename = secure_filename(uploaded.filename)
+    ext = Path(filename).suffix.lower()
+    allowed = ALLOWED_EXTS | {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
+    if ext not in allowed:
+        return jsonify({"ok": False, "error": f"Unsupported format: {ext}"}), 400
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    input_path = UPLOAD_DIR / f"mobile_report_{filename}"
+    uploaded.save(input_path)
+    pipeline.stop()
+
+    def run_processing():
+        try:
+            pipeline.process_mobile_report(str(input_path))
+        except Exception as e:
+            print(f"[AI Server] Mobile report analysis error: {e}")
+            import traceback
+
+            traceback.print_exc()
+            with pipeline.lock:
+                pipeline.stats.status = f"error: {e}"
+                pipeline.stats.last_update_ts = time.time()
+
+    threading.Thread(target=run_processing, daemon=True).start()
+    return jsonify({"ok": True, "message": "Mobile report analysis started"})
 
 
 @app.post("/api/enroll")

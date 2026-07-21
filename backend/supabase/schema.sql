@@ -98,6 +98,22 @@ CREATE INDEX IF NOT EXISTS idx_fines_student_id ON fines(student_id);
 CREATE INDEX IF NOT EXISTS idx_fines_manual_violation_id ON fines(manual_violation_id);
 CREATE INDEX IF NOT EXISTS idx_fines_created_at ON fines(created_at DESC);
 
+-- Fine appeals (see mobileApp/sql/fine_appeals.sql for RLS migration)
+CREATE TABLE IF NOT EXISTS fine_appeals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  fine_id UUID NOT NULL REFERENCES fines(id) ON DELETE CASCADE,
+  student_id UUID REFERENCES students(id) ON DELETE SET NULL,
+  student_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  student_name TEXT,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'rejected')),
+  review_note TEXT,
+  reviewed_by_name TEXT,
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Rewards (issued by discipline_incharge to well-behaved students)
 CREATE TABLE IF NOT EXISTS rewards (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -112,6 +128,13 @@ CREATE TABLE IF NOT EXISTS rewards (
 CREATE INDEX IF NOT EXISTS idx_rewards_student_id ON rewards(student_id);
 CREATE INDEX IF NOT EXISTS idx_rewards_created_at ON rewards(created_at DESC);
 ALTER TABLE rewards ENABLE ROW LEVEL SECURITY;
+
+-- System settings (admin-configurable)
+CREATE TABLE IF NOT EXISTS system_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 -- Activity / history logs (runtime)
 CREATE TABLE IF NOT EXISTS activity_logs (
@@ -132,5 +155,6 @@ ALTER TABLE violations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cameras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE policy_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fines ENABLE ROW LEVEL SECURITY;
